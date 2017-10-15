@@ -10,38 +10,84 @@ output:
 ---
 
 ```{r setup, include=FALSE}
+#The aim of this project is to easily keep track of the mushroom records (or any geolocated database of items) over time while producing a filterable web table of records and an interactive map with the database information.
 knitr::opts_chunk$set(echo = FALSE)
 library(flexdashboard)
 ```
 
 ```{r Required R packages}
-require(devtools)
-#install_github('ramnathv/rCharts')
-require(rCharts)
-#install.packages("htmlwidgets")
-require(htmlwidgets)
-#install.packages("flexdashboard")
-require(flexdashboard)
-#install_github("wch/webshot")
+if (!require("devtools")) require(devtools)
+if (!require("rCharts")) install_github('ramnathv/rCharts')
+if (!require("htmlwidgets")) install.packages("htmlwidgets")
+if (!require("flexdashboard")) install.packages("flexdashboard")
+if (!require("webshot")) install_github("wch/webshot")
 require(webshot)
 #webshot::install_phantomjs()
-#install_github("rstudio/addinexamples", type = "source")
-#install_github("rstudio/crosstalk")
+if (!require("addinexamples")) install_github("rstudio/addinexamples", type = "source")
+if (!require("crosstalk")) install_github("rstudio/crosstalk")
+if (!require("readr")) install.packages("readr")
+if (!require("DT")) install.packages('DT')
 ```
 
 
-Column {data-width=600}
+Column {data-width=800}
 -------------------------------------
-The aim of this project is to easily keep track of the mushroom records (or any geolocated database of items) over time while producing a filterable web table of records and an interactive map with the database information.
-
 ### Dataset
-A DT table with filters will be printed here    
 ```{r DT table}
+#read datasets
+require(readr)
+data.dir  <- "~/Sync/BQa5_Zamiadroid/Citations/"
+data.file <- "20140000_20170900_bolets_Zamia_TAB_Xavier_dePedro.csv"
+d <- readr::read_csv(paste0(data.dir, data.file), col_names = TRUE, col_types = NULL,
+  locale = default_locale(), na = c("", "NA"), quoted_na = TRUE,
+  quote = "\"", comment = "", trim_ws = TRUE, skip = 0, n_max = Inf)
+#head(d)
+#colnames(d)
+#dim(d)
+#str(d)
+#dts <- d$Date
+#head(dts)
+#str(dts)
+#dts2 <- strptime(dts, "%Y-%m-%d %H:%M:%S")
+#head(dts2)
 
+# Clean up data and fix oddities for R
+d$Date <- strptime(d$Date, "%Y-%m-%d %H:%M:%S")
+#d$Pendent[is.na(d$Pendent)] <- "99"
+d$Abundància <- gsub("[^0-9]", "", d$Abundància) 
+d$Abundància <- as.numeric(d$Abundància)
+d$Pendent <- gsub("[^0-9]", "", d$Pendent) 
+d$Pendent <- as.numeric(d$Pendent)
+d$`nom vulgar (comestible)` <- as.factor(d$`nom vulgar (comestible)`)
+d$`nom vulgar (no comestible)` <- as.factor(d$`nom vulgar (no comestible)`)
+
+#str(dn)
+library(DT)
+datatable(d[,5:9], filter = 'top', class = 'cell-border stripe', rownames = FALSE,
+          options = list(pageLength = 5)) %>%
+  formatDate('Date', 'toLocaleDateString') %>%
+#  formatDate('Date', '%Y%m%d') %>%
+  formatStyle('Abundància',
+#              color = styleEqual(c("---", "1. Escàs", 2, 3, 4, "5 Jardí"), c('black', 'black', 'black', 'red', 'red', 'red')),
+              color = styleInterval(c(3, 5), c('black', 'red', 'blue')),
+#    backgroundColor = styleColorBar(range(d$Abundància), 'lightblue'),
+#    backgroundColor = styleEqual(c("---", "1. Escàs", 2, 3, 4, "5 Jardí"), c('white', 'white', 'lightgray', 'gray', 'lightyellow', 'yellow'))
+              backgroundColor = styleInterval(c(3, 5), c('white', 'lightyellow', 'yellow'))
+              )
+
+#              ) %>% 
+#  formatStyle(d$Pendent,
+#    background = styleColorBar(range(d$Pendent), 'lightblue'),
+#    backgroundSize = '98% 88%',
+#    backgroundRepeat = 'no-repeat',
+#    backgroundPosition = 'center')
+
+#   formatStyle(d$Pendent,
+#              color = styleInterval(c(3, 5), c('white', 'blue', 'red')))
 ```   
 
    
-Column {data-width=400}
+Column {data-width=200}
 -------------------------------------
    
 ### Map - Overview
