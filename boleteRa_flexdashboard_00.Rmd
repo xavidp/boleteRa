@@ -13,6 +13,14 @@ output:
 #The aim of this project is to easily keep track of the mushroom records (or any geolocated database of items) over time while producing a filterable web table of records and an interactive map with the database information.
 knitr::opts_chunk$set(echo = FALSE)
 library(flexdashboard)
+
+# TODO
+#* use crosstalk
+#* change map webshot with interactive maps
+#* display data points with data from lat long in the dataset
+#* add extra info in the popup box
+#* display pictures
+#* change format of dates in table
 ```
 
 ```{r Required R packages}
