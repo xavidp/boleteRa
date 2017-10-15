@@ -37,7 +37,8 @@ Column {data-width=800}
 #read datasets
 require(readr)
 data.dir  <- "~/Sync/BQa5_Zamiadroid/Citations/"
-data.file <- "20140000_20170900_bolets_Zamia_TAB_Xavier_dePedro.csv"
+#data.file <- "20140000_20170900_bolets_Zamia_TAB_Xavier_dePedro.csv"
+data.file <- "20140000_20171014_bolets_Zamia_TAB.csv"
 d <- readr::read_csv(paste0(data.dir, data.file), col_names = TRUE, col_types = NULL,
   locale = default_locale(), na = c("", "NA"), quoted_na = TRUE,
   quote = "\"", comment = "", trim_ws = TRUE, skip = 0, n_max = Inf)
