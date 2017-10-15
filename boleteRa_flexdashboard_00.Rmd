@@ -1,0 +1,84 @@
+---
+title: "BoleteRa"
+author: "Xavier de Pedro"
+date: "October 15th, 2017"
+output: 
+  flexdashboard::flex_dashboard:
+    theme: journal
+    social: menu
+    source_code: embed
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+library(flexdashboard)
+```
+
+```{r Required R packages}
+require(devtools)
+#install_github('ramnathv/rCharts')
+require(rCharts)
+#install.packages("htmlwidgets")
+require(htmlwidgets)
+#install.packages("flexdashboard")
+require(flexdashboard)
+#install_github("wch/webshot")
+require(webshot)
+#webshot::install_phantomjs()
+#install_github("rstudio/addinexamples", type = "source")
+#install_github("rstudio/crosstalk")
+```
+
+
+Column {data-width=600}
+-------------------------------------
+The aim of this project is to easily keep track of the mushroom records (or any geolocated database of items) over time while producing a filterable web table of records and an interactive map with the database information.
+
+### Dataset
+A DT table with filters will be printed here    
+```{r DT table}
+
+```   
+
+   
+Column {data-width=400}
+-------------------------------------
+   
+### Map - Overview
+
+
+```{r Create Leaflet-based Map 1 - overview}
+map1 <- Leaflet$new()
+map1$setView(c(51.505, -0.09), zoom = 5)
+map1$marker(c(51.5, -0.09), bindPopup = "<p> Hi. I am a popup </p>")
+map1$marker(c(51.495, -0.083), bindPopup = "<p> Hi. I am another popup </p>")
+# Make html code
+#map1$print("chart7")
+# Display the object in the R Viewer within Rstudio
+#map1
+
+# Save chart as htmnl on disk
+map1$save("./mymap1.html") 
+webshot("./mymap1.html", file="./mymap1.png", delay=0.5)
+```
+
+![My Map - overview](./mymap1.png)
+
+### Map - detail
+    
+```{r Create Leaflet-based Map 2 - detail}
+map2 <- Leaflet$new()
+map2$setView(c(51.505, -0.09), zoom = 13)
+map2$marker(c(51.5, -0.09), bindPopup = "<p> Hi. I am a popup </p>")
+map2$marker(c(51.495, -0.083), bindPopup = "<p> Hi. I am another popup </p>")
+# Make html code
+#map2$print("chart7")
+# Display the object in the R Viewer within Rstudio
+#map2
+
+# Save chart as htmnl on disk
+map2$save("./mymap2.html") 
+webshot("./mymap2.html", file="./mymap2.png", delay=0.5)
+```
+
+![My Map - detail](./mymap2.png)

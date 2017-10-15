@@ -1,0 +1,53 @@
+---
+title: "BoleteRa Crosstalk"
+author: "Xavier de Pedro"
+date: "15 d’octubre de 2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r cars}
+require(devtools)
+#install_github("rstudio/crosstalk")
+#install_github("jcheng5/d3scatter")
+#install_github("rstudio/leaflet")
+
+# See https://rstudio.github.io/crosstalk/using.html
+library(crosstalk)
+library(d3scatter)
+library(leaflet)
+
+```
+
+## Crosstalk with filters
+
+Taken from https://rstudio.github.io/crosstalk/using.html
+
+```{r Crosstalk with filters, echo=TRUE}
+shared_mtcars <- SharedData$new(mtcars)
+shared_quakes <- SharedData$new(quakes[sample(nrow(quakes), 100),])
+#head(quakes)
+#head(mtcars)
+bscols(widths = c(3,NA),
+  list(
+    filter_checkbox("mag", "Magnitude", shared_quakes, ~mag, inline = TRUE),
+    #    filter_select("yes-no", "Yes-No question", shared_quakes, ~ifelse(am == 0, "Yes", "No")),
+    filter_slider("lat", "Latitude", shared_quakes, ~lat, width = "100%"),
+    filter_slider("long", "Longitude", shared_quakes, ~long, width = "100%")
+  ),
+  leaflet(shared_quakes, width = "100%", height = 300) %>%
+    addTiles() %>%
+    addMarkers()
+)
+```
+
+
