@@ -24,7 +24,8 @@ library(flexdashboard)
 ```
 
 ```{r Required R packages}
-if (!require("devtools")) require(devtools)
+if (!require("devtools")) install.packages("devtools")
+require(devtools)
 if (!require("rCharts")) install_github('ramnathv/rCharts')
 if (!require("htmlwidgets")) install.packages("htmlwidgets")
 if (!require("flexdashboard")) install.packages("flexdashboard")

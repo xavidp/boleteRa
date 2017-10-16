@@ -6,25 +6,16 @@ output: html_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = FALSE)
 ```
 
-## R Markdown
-
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
-
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
-
-```{r cars}
-require(devtools)
-#install_github("rstudio/crosstalk")
-#install_github("jcheng5/d3scatter")
-#install_github("rstudio/leaflet")
+```{r install and load required packages if needed}
+if (!require("devtools")) install.packages("devtools"); require(devtools)
 
 # See https://rstudio.github.io/crosstalk/using.html
-library(crosstalk)
-library(d3scatter)
-library(leaflet)
+if (!require("crosstalk")) install_github("rstudio/crosstalk"); library(crosstalk)
+if (!require("leaflet")) install_github("rstudio/leaflet"); library(leaflet)
+if (!require("DT")) install.packages("DT"); library(DT)
 
 ```
 
@@ -32,21 +23,59 @@ library(leaflet)
 
 Taken from https://rstudio.github.io/crosstalk/using.html
 
-```{r Crosstalk with filters, echo=TRUE}
-shared_mtcars <- SharedData$new(mtcars)
-shared_quakes <- SharedData$new(quakes[sample(nrow(quakes), 100),])
+```{r Crosstalk with filters, echo=FALSE}
+### Dataset
+#read datasets
+require(readr)
+data.dir  <- "~/Sync/BQa5_Zamiadroid/Citations/"
+#data.file <- "20140000_20170900_bolets_Zamia_TAB_Xavier_dePedro.csv"
+data.file <- "20140000_20171014_bolets_Zamia_TAB.csv"
+d <- readr::read_csv(paste0(data.dir, data.file), col_names = TRUE, col_types = NULL,
+  na = c("", "NA"), quoted_na = TRUE,
+  quote = "\"", comment = "", trim_ws = TRUE, skip = 0, n_max = Inf)
+
+#shared_mtcars <- SharedData$new(mtcars)
+#shared_quakes <- SharedData$new(quakes[sample(nrow(quakes), 100),])
 #head(quakes)
 #head(mtcars)
-bscols(widths = c(3,NA),
-  list(
-    filter_checkbox("mag", "Magnitude", shared_quakes, ~mag, inline = TRUE),
-    #    filter_select("yes-no", "Yes-No question", shared_quakes, ~ifelse(am == 0, "Yes", "No")),
-    filter_slider("lat", "Latitude", shared_quakes, ~lat, width = "100%"),
-    filter_slider("long", "Longitude", shared_quakes, ~long, width = "100%")
-  ),
-  leaflet(shared_quakes, width = "100%", height = 300) %>%
-    addTiles() %>%
-    addMarkers()
+
+library(stringr)
+#str_split_fixed(d$CitationCoordinates, " ", 2)
+d2 <- cbind(d, data.frame(str_split_fixed(d$CitationCoordinates, " ", 2)))
+#head(d2)
+#str(d2)
+names(d2)[ncol(d2)-1] <-  "Latitude"
+names(d2)[ncol(d2)] <-  "Longitude"
+#str(d2)
+d2$Latitude <- as.numeric(levels(d2$Latitude))[d2$Latitude]
+d2$Longitude <- as.numeric(levels(d2$Longitude))[d2$Longitude]
+d <- d2
+
+# Clean up data and fix oddities for R
+d$Date <- strptime(d$Date, "%Y-%m-%d %H:%M:%S")
+#d$Pendent[is.na(d$Pendent)] <- "99"
+d$Abundància <- gsub("[^0-9]", "", d$Abundància) 
+d$Abundància <- as.numeric(d$Abundància)
+d$Pendent <- gsub("[^0-9]", "", d$Pendent) 
+d$Pendent <- as.numeric(d$Pendent)
+d$`nom vulgar (comestible)` <- as.factor(d$`nom vulgar (comestible)`)
+d$`nom vulgar (no comestible)` <- as.factor(d$`nom vulgar (no comestible)`)
+
+# Use SharedData like a dataframe with Crosstalk-enabled widgets
+bscols(
+  leaflet::leaflet(d) %>% addTiles() %>% addMarkers(),
+  datatable(d[5:9],  filter = 'top', extensions="Scroller", 
+            style="bootstrap", class="compact",
+            width="100%", rownames = FALSE, 
+            options=list(deferRender=TRUE, 
+                         scrollY=300, 
+                         scroller=TRUE, 
+                         pageLength = 5)) %>%
+    formatDate('Date', 'toLocaleDateString') %>%
+    formatStyle('Abundància', 
+                color = styleInterval(c(3, 5), c('black', 'red', 'blue')),
+                backgroundColor = styleInterval(c(3, 5), c('white', 'lightyellow', 'yellow'))
+              )
 )
 ```
 
