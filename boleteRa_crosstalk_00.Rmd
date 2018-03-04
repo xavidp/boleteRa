@@ -2,7 +2,7 @@
 title: "BoleteRa Crosstalk"
 author: "Xavier de Pedro"
 date: "15 d’octubre de 2017"
-output: html_document
+output: html_notebook
 ---
 
 ```{r setup, include=FALSE}
