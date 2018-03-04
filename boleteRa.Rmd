@@ -173,10 +173,8 @@ tilesURL <- "http://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Li
 # See leaflet marker options here: 
 # https://rstudio.github.io/leaflet/markers.html 
 
-# Use SharedData like a dataframe with Crosstalk-enabled widgets
-# ct stands for CrossTalk
-ct.map.table.all <- bscols(
-  leaflet::leaflet(md) %>% 
+# Create the Leaflet map with my data md (ll.md)
+  ll.md <- leaflet::leaflet(md) %>% 
       # Base groups
     addProviderTiles(providers$OpenStreetMap, group = "OSM") %>%
 #    addTiles(tilesURL, 	attribution='Map tiles by <a href="http://server.arcgisonline.com">ArcGIS online</a> &mdash; Map data &copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>') %>% 
@@ -211,7 +209,14 @@ ct.map.table.all <- bscols(
   ) %>%
   
     # Legend
-    addLegend("bottomright", colors= "blue", labels="MyFindings", title="Catalonia"),
+    addLegend("bottomright", colors= "blue", labels="MyFindings", title="Catalonia")
+  
+# ------
+# Use SharedData like a dataframe with Crosstalk-enabled widgets
+# ct stands for CrossTalk
+ct.map.table.all <- bscols(
+  # Draw the Leaflet map from my data md
+  ll.md,
 
   # Add the data table next to the map
   datatable(md[5:10],  filter = 'top', extensions="Scroller", 
@@ -230,8 +235,19 @@ ct.map.table.all <- bscols(
 
 #saveWidget(ct.map.table.all, file=file.path(getwd(), htmlpath, "ct.map.table.all.html"), selfcontained=TRUE) 
 
+# Save chart as html on disk
+htmltools::save_html(ct.map.table.all, 
+                     file.path(getwd(), htmlpath, "map.table.all.html")
+                     )
+
+webshot(file.path(getwd(), htmlpath, "map.table.all.html"),
+        file=file.path(getwd(), htmlpath, "map.table.all.png"),
+        delay=0.5)
+
 ct.map.table.all
 
 ```
+
+![My Map - overview](./html/map.table.all.png)
 
 
