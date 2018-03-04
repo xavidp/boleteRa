@@ -10,7 +10,7 @@ knitr::opts_chunk$set(echo = FALSE)
 ```
 
 ```{r install and load required packages if needed, echo=FALSE}
-if (!require("devtools")) install.packages("devtools"); require(devtools)
+if (!require("devtools")) install.packages("devtools"); library(devtools)
 
 # Packages for Data manipulation
 if (!require("readODS")) install.packages("readODS"); library(readODS)
@@ -20,12 +20,19 @@ if (!require("dplyr")) install.packages("dplyr"); library(dplyr)
 # Packages for Html5 Output manipulation
 # Add package widget frame so that we attempt to get responsive iframes produced by htmlwidgets
 # See: https://github.com/bhaskarvk/widgetframe
-if(!require(widgetframe)){ install.packages("widgetframe") }; require(widgetframe)
-if(!require(htmlwidgets)){ install.packages("htmlwidgets") }; require(htmlwidgets) 
+if(!require(widgetframe)){ install.packages("widgetframe") }; library(widgetframe)
+if(!require(htmlwidgets)){ install.packages("htmlwidgets") }; library(htmlwidgets) 
 # Add webshot to allow making screenshots from htmlwidgets for printed versions of reports
-if(!require(webshot)){ install.packages("webshot") }; require(webshot)
+if(!require(webshot)){ install.packages("webshot") }; library(webshot)
 # Install also phantomjs thorugh webshot as a required dependency (only once)
 #webshot::install_phantomjs(baseURL = "https://bitbucket.org/ariya/phantomjs/downloads/")
+
+# Note: some system packages are needed for tmap to install properly in Ubuntu 16.04 systems
+# and for some of them you may need to add an extra repository (confirmed upto Ubuntu 16.04)
+# sudo add-apt-repository -y ppa:opencpu/jq
+# sudo add-apt-repository -y ppa:ubuntugis/ubuntugis-unstable
+# sudo apt update
+# sudo apt install libudunits2-0 libudunits2-dev libjq-dev libprotobuf-dev protobuf-compiler libgdal20
 
 # Packages for Maps
 if (!require("tmap")) install.packages("tmap")
