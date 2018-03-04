@@ -70,6 +70,13 @@ htmlpath <- "html"
 
 ```
 
+## Pivot table
+
+```{r pivot table, echo=FALSE}
+
+
+```
+
 ## Thematic map
 
 See: https://github.com/mtennekes/tmap
@@ -127,10 +134,17 @@ d$Pendent <- as.numeric(d$Pendent)
 d$`nom vulgar (comestible)` <- as.factor(d$`nom vulgar (comestible)`)
 d$`nom vulgar (no comestible)` <- as.factor(d$`nom vulgar (no comestible)`)
 
+# Initialize basemap for r package leaflet
+tilesURL <- "http://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}"
+  
 # Use SharedData like a dataframe with Crosstalk-enabled widgets
 # ct stands for CrossTalk
 ct.map.table.all <- bscols(
-  leaflet::leaflet(d) %>% addTiles() %>% addMarkers(),
+  leaflet::leaflet(d) %>% 
+    addTiles(tilesURL, 	attribution='Map tiles by <a href="http://server.arcgisonline.com">ArcGIS online</a>, <a href="http://creativecommons.org/licenses/by/3.0">CC BY 3.0</a> &mdash; Map data &copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>') %>% 
+    addMarkers(label = ~as.character(d$`nom vulgar (comestible)`),
+               popup = ~as.character(d$Abundància)) %>%
+    addLegend("bottomright", colors= "blue", labels="Some mushroom findings", title="In Catalonia"),
   datatable(d[5:9],  filter = 'top', extensions="Scroller", 
             style="bootstrap", class="compact",
             width="100%", rownames = FALSE, 
@@ -145,7 +159,7 @@ ct.map.table.all <- bscols(
               )
 )
 
-saveWidget(ct.map.table.all, file=file.path(getwd(), htmlpath, "ct.map.table.all.html"), selfcontained=TRUE) 
+#saveWidget(ct.map.table.all, file=file.path(getwd(), htmlpath, "ct.map.table.all.html"), selfcontained=TRUE) 
 
 ct.map.table.all
 
