@@ -9,13 +9,72 @@ output: html_notebook
 knitr::opts_chunk$set(echo = FALSE)
 ```
 
-```{r install and load required packages if needed}
+```{r install and load required packages if needed, echo=FALSE}
 if (!require("devtools")) install.packages("devtools"); require(devtools)
 
+# Packages for Data manipulation
+if (!require("readODS")) install.packages("readODS"); library(readODS)
+if (!require("readxl")) install.packages("readxl"); library(readxl)
+if (!require("dplyr")) install.packages("dplyr"); library(dplyr)
+
+# Packages for Html5 Output manipulation
+# Add package widget frame so that we attempt to get responsive iframes produced by htmlwidgets
+# See: https://github.com/bhaskarvk/widgetframe
+if(!require(widgetframe)){ install.packages("widgetframe") }; require(widgetframe)
+if(!require(htmlwidgets)){ install.packages("htmlwidgets") }; require(htmlwidgets) 
+# Add webshot to allow making screenshots from htmlwidgets for printed versions of reports
+if(!require(webshot)){ install.packages("webshot") }; require(webshot)
+# Install also phantomjs thorugh webshot as a required dependency (only once)
+#webshot::install_phantomjs(baseURL = "https://bitbucket.org/ariya/phantomjs/downloads/")
+
+# Packages for Maps
+if (!require("tmap")) install.packages("tmap")
+if (!require("leaflet")) install_github("rstudio/leaflet"); library(leaflet)
+if (!require("leaflet.minicharts")) install.packages("leaflet.minicharts"); library(leaflet.minicharts)
+
+# Packages for Interactive Tables
+if (!require("DT")) install.packages("DT"); library(DT)
+if (!require(rpivotTable)){ install.packages("rpivotTable") }; require(rpivotTable)
+
+# Packages for Dashboard-like UI to display results 
 # See https://rstudio.github.io/crosstalk/using.html
 if (!require("crosstalk")) install_github("rstudio/crosstalk"); library(crosstalk)
-if (!require("leaflet")) install_github("rstudio/leaflet"); library(leaflet)
-if (!require("DT")) install.packages("DT"); library(DT)
+# Test adding an easy interface to allow changing htmlwidget on the go with manipulatewidget
+# See: https://github.com/rte-antares-rpackage/manipulateWidget
+if (!require("manipulateWidget")) install.packages("manipulateWidget"); library(manipulateWidget) 
+
+```
+
+## Read source data
+
+```{r Read data, echo=FALSE}
+  # =======================================================
+  # Use readODS package to keep data easily in a Visual Spreadsheet in LibreOffice
+  # =======================================================
+  # 
+  # Code will come here
+
+# Define some paths
+htmlpath <- "html"
+
+#read_ods(path = NULL, sheet = 1, col_names = TRUE, col_types = NULL, na = "", skip = 0, formula_as_formula = FALSE, range = NULL)
+#read_ods("table.ods", header = TRUE) ## return only the first sheet
+#read_ods("multisheet.ods", sheet = 2, formula_as_formula = TRUE) ## return the second sheet with formula read as formula
+
+```
+
+## Thematic map
+
+See: https://github.com/mtennekes/tmap
+
+```{r Thematic map, echo=FALSE}
+  # =======================================================
+  # Use the thematic maps package
+  # See: https://github.com/mtennekes/tmap
+  # =======================================================
+  # 
+  # Code will come here
+
 
 ```
 
@@ -62,7 +121,8 @@ d$`nom vulgar (comestible)` <- as.factor(d$`nom vulgar (comestible)`)
 d$`nom vulgar (no comestible)` <- as.factor(d$`nom vulgar (no comestible)`)
 
 # Use SharedData like a dataframe with Crosstalk-enabled widgets
-bscols(
+# ct stands for CrossTalk
+ct.map.table.all <- bscols(
   leaflet::leaflet(d) %>% addTiles() %>% addMarkers(),
   datatable(d[5:9],  filter = 'top', extensions="Scroller", 
             style="bootstrap", class="compact",
@@ -77,6 +137,11 @@ bscols(
                 backgroundColor = styleInterval(c(3, 5), c('white', 'lightyellow', 'yellow'))
               )
 )
+
+saveWidget(ct.map.table.all, file=file.path(getwd(), htmlpath, "ct.map.table.all.html"), selfcontained=TRUE) 
+
+ct.map.table.all
+
 ```
 
 
