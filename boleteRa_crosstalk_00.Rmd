@@ -68,6 +68,11 @@ htmlpath <- "html"
 #read_ods("table.ods", header = TRUE) ## return only the first sheet
 #read_ods("multisheet.ods", sheet = 2, formula_as_formula = TRUE) ## return the second sheet with formula read as formula
 
+#My Data File (relative path from home folder)
+mdf <- file.path("~", "Dropbox", "Bolets", "zamiaDroid", "Citations", "000000_bolets_Zamia_TAB_v02.ods")
+# My Data
+md  <- read_ods(path = mdf, sheet = 1, col_names = TRUE, col_types = NULL, na = "", skip = 0, formula_as_formula = FALSE, range = NULL)
+head(md)
 ```
 
 ## Pivot table
@@ -178,7 +183,7 @@ ct.map.table.all <- bscols(
   ) %>%
   
     # Legend
-    addLegend("bottomright", colors= "blue", labels="My findings", title="Catalonia"),
+    addLegend("bottomright", colors= "blue", labels="MyFindings", title="Catalonia"),
 
   # Add the data table next to the map
   datatable(d[5:9],  filter = 'top', extensions="Scroller", 
