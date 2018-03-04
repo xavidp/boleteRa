@@ -144,12 +144,32 @@ tilesURL <- "http://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Li
 # ct stands for CrossTalk
 ct.map.table.all <- bscols(
   leaflet::leaflet(d) %>% 
-    addProviderTiles(providers$OpenStreetMap) %>%
+      # Base groups
+    addProviderTiles(providers$OpenStreetMap, group = "OSM") %>%
 #    addTiles(tilesURL, 	attribution='Map tiles by <a href="http://server.arcgisonline.com">ArcGIS online</a> &mdash; Map data &copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>') %>% 
+  
+    # Overlay groups
     addMarkers(label = ~as.character(d$`nom vulgar (comestible)`),
                popup = ~as.character(d$Abundància),
-               clusterOptions = markerClusterOptions()) %>%
+               clusterOptions = markerClusterOptions(),
+               group = "Edible") %>%
+
+    addMarkers(label = ~as.character(d$`nom vulgar (no comestible)`),
+               popup = ~as.character(d$Abundància),
+               clusterOptions = markerClusterOptions(),
+               group = "Non Edible") %>%
+  
+    # Layers control
+  addLayersControl(
+    baseGroups = c("OSM"),
+    overlayGroups = c("Edible", "Non Edible"),
+    options = layersControlOptions(collapsed = FALSE)
+  ) %>%
+  
+    # Legend
     addLegend("bottomright", colors= "blue", labels="My findings", title="Catalonia"),
+
+  # Add the data table next to the map
   datatable(d[5:9],  filter = 'top', extensions="Scroller", 
             style="bootstrap", class="compact",
             width="100%", rownames = FALSE, 
