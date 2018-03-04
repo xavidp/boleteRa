@@ -150,19 +150,30 @@ ct.map.table.all <- bscols(
   
     # Overlay groups
     addMarkers(label = ~as.character(d$`nom vulgar (comestible)`),
-               popup = ~as.character(d$Abundància),
+               popup = paste(
+                 "Name1:", d$`nom vulgar (comestible)`, "<br>",
+                 "Name2:", d$`nom vulgar (no comestible)`, "<br>",
+                 "Abundance:", d$Abundància, "<br>",
+                 "Mushroom Details:", d$`Detalls del bolet`, "<br>",
+                 "Forest density:", d$`Densitat del sotabosc`, "<br>",
+                 "Site desc:", d$`Descripció del lloc`, "<br>",
+                 "Slope:", d$Pendent, "<br>",
+                 "Picture:", d$foto, "<br>",
+                 "Date:", d$Date
+                 ),
                clusterOptions = markerClusterOptions(),
                group = "Edible") %>%
 
-    addMarkers(label = ~as.character(d$`nom vulgar (no comestible)`),
-               popup = ~as.character(d$Abundància),
-               clusterOptions = markerClusterOptions(),
-               group = "Non Edible") %>%
+    # addMarkers(label = ~as.character(d$`nom vulgar (no comestible)`),
+    #            popup = ~as.character(d$Abundància),
+    #            clusterOptions = markerClusterOptions(),
+    #            group = "Non Edible") %>%
   
     # Layers control
   addLayersControl(
     baseGroups = c("OSM"),
-    overlayGroups = c("Edible", "Non Edible"),
+#    overlayGroups = c("Edible", "Non Edible"),
+    overlayGroups = c("Edible"),
     options = layersControlOptions(collapsed = FALSE)
   ) %>%
   
