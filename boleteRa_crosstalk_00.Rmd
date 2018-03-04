@@ -54,12 +54,11 @@ if (!require("manipulateWidget")) install.packages("manipulateWidget"); library(
 
 ## Read source data
 
-```{r Read data, echo=FALSE}
+```{r Read source data, echo=FALSE}
   # =======================================================
-  # Use readODS package to keep data easily in a Visual Spreadsheet in LibreOffice
+  # First approach: Use readODS package to keep data easily in a Visual Spreadsheet in LibreOffice
   # =======================================================
   # 
-  # Code will come here
 
 # Define some paths
 htmlpath <- "html"
@@ -73,11 +72,76 @@ mdf <- file.path("~", "Dropbox", "Bolets", "zamiaDroid", "Citations", "000000_bo
 # My Data
 md  <- read_ods(path = mdf, sheet = 1, col_names = TRUE, col_types = NULL, na = "", skip = 0, formula_as_formula = FALSE, range = NULL)
 head(md)
+
+# =======================================================
+# Former 2nd approach: Use readr to import a csv file
+# =======================================================
+# 
+
+# ### Dataset
+# #read datasets
+# require(readr)
+# data.dir  <- "~/Sync/BQa5_Zamiadroid/Citations/"
+# #data.file <- "20140000_20170900_bolets_Zamia_TAB_Xavier_dePedro.csv"
+# data.file <- "20140000_20171014_bolets_Zamia_TAB.csv"
+# d <- readr::read_csv(paste0(data.dir, data.file), col_names = TRUE, col_types = NULL,
+#   na = c("", "NA"), quoted_na = TRUE,
+#   quote = "\"", comment = "", trim_ws = TRUE, skip = 0, n_max = Inf)
+# 
+
+```
+## Tidy data set
+
+```{r Tidy data set, echo=FALSE}
+# =======================================================
+# Tidy data set
+# =======================================================
+# SPlit lat and long in two columns from the combined values in one column produced by zamiaDroid
+library(stringr)
+md2 <- cbind(md, data.frame(str_split_fixed(md$CitationCoordinates, " ", 2)))
+names(md2)[ncol(md2)-1] <-  "Latitude"
+names(md2)[ncol(md2)] <-  "Longitude"
+md2$Latitude <- as.numeric(levels(md2$Latitude))[md2$Latitude]
+md2$Longitude <- as.numeric(levels(md2$Longitude))[md2$Longitude]
+md <- md2
+
+# Clean up data and fix oddities for R
+md$Date <- strptime(md$Date, "%Y-%m-%d %H:%M:%S")
+#d$Pendent[is.na(md$Pendent)] <- "99"
+md$Abundància <- gsub("[^0-9]", "", md$Abundància) 
+md$Abundància <- as.numeric(md$Abundància)
+md$Pendent <- gsub("[^0-9]", "", md$Pendent) 
+md$Pendent <- as.numeric(md$Pendent)
+md$`nom vulgar (comestible)` <- as.factor(md$`nom vulgar (comestible)`)
+md$`nom vulgar (no comestible)` <- as.factor(md$`nom vulgar (no comestible)`)
+
+head(md)
 ```
 
 ## Pivot table
 
 ```{r pivot table, echo=FALSE}
+
+# Create the pivot table and save html on disk
+rpivotTable(md)
+
+pt.md <- rpivotTable(
+  data = md, 
+  rows = c("Year", "nom vulgar (comestible)"), 
+  cols=c("Month"), 
+  aggregatorName = "Count", 
+#  aggregatorName = "Sum", 
+#  vals = "Abundància", 
+  width="1200px", 
+  height="800px",   
+#  inclusions = list( Abundància = list("2")),
+  exclusions = list( `nom vulgar (comestible)` = list( "---")),
+  rendererName = "Heatmap"
+  )
+frameWidget(pt.md)
+saveWidget(pt.md, file=file.path(getwd(), htmlpath, "boleteRa.pivotTable.html"), selfcontained=TRUE) 
+
+pt.md
 
 
 ```
@@ -102,42 +166,6 @@ See: https://github.com/mtennekes/tmap
 Taken from https://rstudio.github.io/crosstalk/using.html
 
 ```{r Crosstalk with filters, echo=FALSE}
-### Dataset
-#read datasets
-require(readr)
-data.dir  <- "~/Sync/BQa5_Zamiadroid/Citations/"
-#data.file <- "20140000_20170900_bolets_Zamia_TAB_Xavier_dePedro.csv"
-data.file <- "20140000_20171014_bolets_Zamia_TAB.csv"
-d <- readr::read_csv(paste0(data.dir, data.file), col_names = TRUE, col_types = NULL,
-  na = c("", "NA"), quoted_na = TRUE,
-  quote = "\"", comment = "", trim_ws = TRUE, skip = 0, n_max = Inf)
-
-#shared_mtcars <- SharedData$new(mtcars)
-#shared_quakes <- SharedData$new(quakes[sample(nrow(quakes), 100),])
-#head(quakes)
-#head(mtcars)
-
-library(stringr)
-#str_split_fixed(d$CitationCoordinates, " ", 2)
-d2 <- cbind(d, data.frame(str_split_fixed(d$CitationCoordinates, " ", 2)))
-#head(d2)
-#str(d2)
-names(d2)[ncol(d2)-1] <-  "Latitude"
-names(d2)[ncol(d2)] <-  "Longitude"
-#str(d2)
-d2$Latitude <- as.numeric(levels(d2$Latitude))[d2$Latitude]
-d2$Longitude <- as.numeric(levels(d2$Longitude))[d2$Longitude]
-d <- d2
-
-# Clean up data and fix oddities for R
-d$Date <- strptime(d$Date, "%Y-%m-%d %H:%M:%S")
-#d$Pendent[is.na(d$Pendent)] <- "99"
-d$Abundància <- gsub("[^0-9]", "", d$Abundància) 
-d$Abundància <- as.numeric(d$Abundància)
-d$Pendent <- gsub("[^0-9]", "", d$Pendent) 
-d$Pendent <- as.numeric(d$Pendent)
-d$`nom vulgar (comestible)` <- as.factor(d$`nom vulgar (comestible)`)
-d$`nom vulgar (no comestible)` <- as.factor(d$`nom vulgar (no comestible)`)
 
 # Initialize basemap for r package leaflet
 tilesURL <- "http://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}"
@@ -148,23 +176,23 @@ tilesURL <- "http://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Li
 # Use SharedData like a dataframe with Crosstalk-enabled widgets
 # ct stands for CrossTalk
 ct.map.table.all <- bscols(
-  leaflet::leaflet(d) %>% 
+  leaflet::leaflet(md) %>% 
       # Base groups
     addProviderTiles(providers$OpenStreetMap, group = "OSM") %>%
 #    addTiles(tilesURL, 	attribution='Map tiles by <a href="http://server.arcgisonline.com">ArcGIS online</a> &mdash; Map data &copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>') %>% 
   
     # Overlay groups
-    addMarkers(label = ~as.character(d$`nom vulgar (comestible)`),
+    addMarkers(label = ~as.character(md$`nom vulgar (comestible)`),
                popup = paste(
-                 "Name1:", d$`nom vulgar (comestible)`, "<br>",
-                 "Name2:", d$`nom vulgar (no comestible)`, "<br>",
+                 "Name1:", md$`nom vulgar (comestible)`, "<br>",
+                 "Name2:", md$`nom vulgar (no comestible)`, "<br>",
                  "Abundance:", d$Abundància, "<br>",
-                 "Mushroom Details:", d$`Detalls del bolet`, "<br>",
-                 "Forest density:", d$`Densitat del sotabosc`, "<br>",
-                 "Site desc:", d$`Descripció del lloc`, "<br>",
-                 "Slope:", d$Pendent, "<br>",
-                 "Picture:", d$foto, "<br>",
-                 "Date:", d$Date
+                 "Mushroom Details:", md$`Detalls del bolet`, "<br>",
+                 "Forest density:", md$`Densitat del sotabosc`, "<br>",
+                 "Site desc:", md$`Descripció del lloc`, "<br>",
+                 "Slope:", md$Pendent, "<br>",
+                 "Picture:", md$foto, "<br>",
+                 "Date:", md$Date
                  ),
                clusterOptions = markerClusterOptions(),
                group = "Edible") %>%
@@ -186,7 +214,7 @@ ct.map.table.all <- bscols(
     addLegend("bottomright", colors= "blue", labels="MyFindings", title="Catalonia"),
 
   # Add the data table next to the map
-  datatable(d[5:9],  filter = 'top', extensions="Scroller", 
+  datatable(md[5:10],  filter = 'top', extensions="Scroller", 
             style="bootstrap", class="compact",
             width="100%", rownames = FALSE, 
             options=list(deferRender=TRUE, 
