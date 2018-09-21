@@ -123,7 +123,7 @@ head(md)
 ```{r pivot table, echo=FALSE}
 
 # Create the pivot table and save html on disk
-rpivotTable(md)
+#rpivotTable(md)
 
 pt.md <- rpivotTable(
   data = md, 
@@ -141,7 +141,7 @@ pt.md <- rpivotTable(
 frameWidget(pt.md)
 saveWidget(pt.md, file=file.path(getwd(), htmlpath, "boleteRa.pivotTable.html"), selfcontained=TRUE) 
 
-pt.md
+#pt.md
 
 
 ```
@@ -165,7 +165,62 @@ See: https://github.com/mtennekes/tmap
 
 Taken from https://rstudio.github.io/crosstalk/using.html
 
-```{r Crosstalk with filters, echo=FALSE}
+```{r Crosstalk with filters short version, echo=FALSE}
+#Reset DAte as posixct instead of posixlt
+md$Date <- as.POSIXct(md$Date, format = "%m/%d/%Y %H:%M")
+
+#Filter subset of md with data in species
+md.sample <- md %>%
+  select(
+    Any=Year,
+    Mes=Month,
+    Abundància,
+#    Data=Date,
+    NomC=`nom vulgar (comestible)`,
+#    NomNC=`nom vulgar (no comestible)`,
+#    DetallBolet=`Detalls del bolet`,
+    DescripcioLloc=`descripció lloc`,
+    Lat=Latitude,
+    Long=Longitude) %>%
+  filter(!is.na(NomC)) %>%
+  filter(NomC != "---") %>%
+  filter(NomC != "altres") %>%
+  top_n(15)
+
+sdf <- SharedData$new(md.sample, as.character(md.sample$NomC))
+
+
+bscols(widths = c(3,NA,NA),
+  # Col 1: Filters
+    list(
+      filter_checkbox("Ab", "Abundància", sdf, ~Abundància, inline = TRUE),
+      filter_slider("A", "Any", sdf, column=~Any, step=1, width="100%"),
+      filter_slider("M", "Mes", sdf, column=~Mes, step=1, width="100%")
+#   , filter_select("auto", "Automatic", shared_mtcars, ~ifelse(am == 0, "Yes", "No"))
+    ),
+  # Col 2: Map (LeafLet)
+  leaflet(sdf) %>% addTiles() %>% addMarkers(
+    label = paste0(md.sample$Any, "-", md.sample$Mes, " ", as.character(md.sample$NomC)),
+    popup = paste(
+      "Name1:", md.sample$NomC, "<br>",
+      "Abundance:", md.sample$Abundància, "<br>",
+      "Date:", paste0(md.sample$Any, "-", md.sample$Mes), "<br>"
+#      ,"Mushroom Details:", md.sample$DetallsBolet, "<br>",
+#      "Forest density:", md.sample$Densitat, "<br>",
+      ,"Site desc:", md.sample$DescripcioLloc, "<br>"
+#                 "Slope:", md.sample$Pendent, "<br>",
+#                 "Picture:", md.sample$foto, "<br>",
+      )),
+  # Col 3: DT
+  datatable(sdf, extensions="Scroller", style="bootstrap", class="compact", width="100%",
+            options=list(deferRender=TRUE, scrollY=300, scroller=TRUE)
+            )
+  )
+    
+```
+
+
+```{r Crosstalk with filters long version, echo=FALSE}
 
 # Initialize basemap for r package leaflet
 tilesURL <- "http://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}"
@@ -184,7 +239,7 @@ tilesURL <- "http://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Li
                popup = paste(
                  "Name1:", md$`nom vulgar (comestible)`, "<br>",
                  "Name2:", md$`nom vulgar (no comestible)`, "<br>",
-                 "Abundance:", d$Abundància, "<br>",
+                 "Abundance:", md$Abundància, "<br>",
                  "Mushroom Details:", md$`Detalls del bolet`, "<br>",
                  "Forest density:", md$`Densitat del sotabosc`, "<br>",
                  "Site desc:", md$`Descripció del lloc`, "<br>",
