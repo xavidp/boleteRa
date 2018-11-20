@@ -2,7 +2,7 @@
 title: "BoleteRa Crosstalk"
 author: "Xavier de Pedro"
 date: "15 d’octubre de 2017"
-output: html_notebook
+output: html_document
 ---
 
 ```{r setup, include=FALSE}
@@ -68,10 +68,10 @@ htmlpath <- "html"
 #read_ods("multisheet.ods", sheet = 2, formula_as_formula = TRUE) ## return the second sheet with formula read as formula
 
 #My Data File (relative path from home folder)
-mdf <- file.path("~", "Dropbox", "Bolets", "zamiaDroid", "Citations", "000000_bolets_Zamia_TAB_v02.ods")
+#mdf <- file.path("~", "Dropbox", "Bolets", "zamiaDroid", "Citations", "000000_bolets_Zamia_TAB_v02.ods")
 # My Data
-md  <- read_ods(path = mdf, sheet = 1, col_names = TRUE, col_types = NULL, na = "", skip = 0, formula_as_formula = FALSE, range = NULL)
-head(md)
+#md  <- read_ods(path = mdf, sheet = 1, col_names = TRUE, col_types = NULL, na = "", skip = 0, formula_as_formula = FALSE, range = NULL)
+#head(md)
 
 # =======================================================
 # Former 2nd approach: Use readr to import a csv file
@@ -80,14 +80,16 @@ head(md)
 
 # ### Dataset
 # #read datasets
-# require(readr)
-# data.dir  <- "~/Sync/BQa5_Zamiadroid/Citations/"
+require(readr)
+data.dir  <- file.path("~", "Dropbox", "Bolets", "zamiaDroid", "Citations", "00_data")
+setwd(data.dir)
 # #data.file <- "20140000_20170900_bolets_Zamia_TAB_Xavier_dePedro.csv"
 # data.file <- "20140000_20171014_bolets_Zamia_TAB.csv"
-# d <- readr::read_csv(paste0(data.dir, data.file), col_names = TRUE, col_types = NULL,
-#   na = c("", "NA"), quoted_na = TRUE,
-#   quote = "\"", comment = "", trim_ws = TRUE, skip = 0, n_max = Inf)
-# 
+temp = list.files(path=data.dir, pattern="*.tab", full.names = T)
+myfiles = lapply(temp, read_tsv)
+
+#Combine files. derived from https://stackoverflow.com/a/11433532
+md <- dplyr::bind_rows(myfiles) 
 
 ```
 ## Tidy data set
