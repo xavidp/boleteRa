@@ -120,6 +120,15 @@ md$`nom vulgar (no comestible)` <- as.factor(md$`nom vulgar (no comestible)`)
 head(md)
 ```
 
+## Save Spreadsheet and csv (just in case)
+
+```{r}
+openxlsx::write.xlsx(md, file = "00_data.xlsx")
+
+```
+
+
+
 ## Pivot table
 
 ```{r pivot table, echo=FALSE}
