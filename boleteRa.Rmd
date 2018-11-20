@@ -129,8 +129,8 @@ head(md)
 
 pt.md <- rpivotTable(
   data = md, 
-  rows = c("Year", "nom vulgar (comestible)"), 
-  cols=c("Month"), 
+  rows = c("nom vulgar (comestible)"), 
+  cols=c("Year", "Month"), 
   aggregatorName = "Count", 
 #  aggregatorName = "Sum", 
 #  vals = "Abundància", 
