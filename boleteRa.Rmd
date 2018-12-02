@@ -15,6 +15,7 @@ if (!require("devtools")) install.packages("devtools"); library(devtools)
 # Packages for Data manipulation
 if (!require("readODS")) install.packages("readODS"); library(readODS)
 if (!require("readxl")) install.packages("readxl"); library(readxl)
+if (!require("openxlsx")) install.packages("openxlsx"); library(openxlsx)
 if (!require("dplyr")) install.packages("dplyr"); library(dplyr)
 
 # Packages for Html5 Output manipulation
@@ -123,10 +124,37 @@ head(md)
 ## Save Spreadsheet and csv (just in case)
 
 ```{r}
+str(md)
+write_csv(md, "00_data.csv")
 openxlsx::write.xlsx(md, file = "00_data.xlsx")
 
 ```
 
+```{r save DT html}
+# ------
+  # Add the data table next to the map
+dt.data <- datatable(md[5:10],  filter = 'top', extensions="Scroller", 
+                     style="bootstrap", class="compact",
+                     width="100%", rownames = FALSE, 
+                     options=list(deferRender=TRUE, 
+                                  scrollY=300, 
+                                  scroller=TRUE, 
+                                  pageLength = 5)) %>%
+  formatDate('Date', 'toLocaleDateString') %>%
+  formatStyle('Abundància', 
+              color = styleInterval(c(3, 5), c('black', 'red', 'blue')),
+              backgroundColor = styleInterval(c(3, 5), c('white', 'lightyellow', 'yellow'))
+  )
+
+
+#saveWidget(ct.map.table.all, file=file.path(getwd(), htmlpath, "ct.map.table.all.html"), selfcontained=TRUE) 
+
+# Save chart as html on disk
+htmltools::save_html(table.all, 
+                     file.path(getwd(), htmlpath, "table.all.html")
+                     )
+
+```
 
 
 ## Pivot table
