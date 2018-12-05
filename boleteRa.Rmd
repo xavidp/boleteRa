@@ -39,6 +39,8 @@ if(!require(webshot)){ install.packages("webshot") }; library(webshot)
 if (!require("tmap")) install.packages("tmap")
 if (!require("leaflet")) install_github("rstudio/leaflet"); library(leaflet)
 if (!require("leaflet.minicharts")) install.packages("leaflet.minicharts"); library(leaflet.minicharts)
+if (!require("geonames")) install.packages("geonames"); library(geonames)
+if (!require("ggmap")) install.packages("ggmap"); library(ggmap)
 
 # Packages for Interactive Tables
 if (!require("DT")) install.packages("DT"); library(DT)
@@ -121,6 +123,63 @@ md$`nom vulgar (no comestible)` <- as.factor(md$`nom vulgar (no comestible)`)
 head(md)
 ```
 
+## Add altitude
+
+```{r Add altitude}
+# See https://stackoverflow.com/a/8975851
+# You can use the package that looks up from geonames, and get the value from the srtm3 digital elevation model:
+# 
+# > require(geonames)
+# > GNsrtm3(54.481084,-3.220625)
+#   srtm3       lng      lat
+# 1   797 -3.220625 54.48108
+# 
+# or the gtopo30 model:
+# 
+# > GNgtopo30(54.481084,-3.220625)
+#   gtopo30       lng      lat
+# 1     520 -3.220625 54.48108
+# 
+# geonames is on CRAN so install.packages("geonames") will get it.
+#No geonamesUsername set. See http://geonames.wordpress.com/2010/03/16/ddos-part-ii/ and set one with options(geonamesUsername="foo") for some services to work
+options(geonamesUsername="xavidp") 
+GNsrtm3(54.481084,-3.220625)
+
+
+
+
+# Or this: https://stackoverflow.com/a/41773871
+# to use googleway package with an api key
+```
+
+## Add nearest city info
+
+```{r Add nearest city info}
+# See: https://stackoverflow.com/a/42320195
+
+# Here is a quick solution to reverse geocoding in ggmap:
+# 
+# library(ggmap)
+# 
+# > coords
+#         lon      lat
+# 1  37.61730 55.75583
+# 2 116.40739 39.90421
+# 3 -77.03687 38.90719
+# 
+# res <- lapply(with(coords, paste(lat, lon, sep = ",")), geocode, output = "more")
+# 
+# 
+# > transform(coords, city = sapply(res, "[[", "locality"))
+#         lon      lat       city
+# 1  37.61730 55.75583     Moskva
+# 2 116.40739 39.90421    Beijing
+# 3 -77.03687 38.90719 Washington
+
+
+```
+
+
 ## Save Spreadsheet and csv (just in case)
 
 ```{r}
@@ -150,7 +209,7 @@ dt.data <- datatable(md[5:10],  filter = 'top', extensions="Scroller",
 #saveWidget(ct.map.table.all, file=file.path(getwd(), htmlpath, "ct.map.table.all.html"), selfcontained=TRUE) 
 
 # Save chart as html on disk
-htmltools::save_html(table.all, 
+htmltools::save_html(dt.data, 
                      file.path(getwd(), htmlpath, "table.all.html")
                      )
 
