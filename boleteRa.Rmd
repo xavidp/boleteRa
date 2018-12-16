@@ -15,6 +15,8 @@ if (!require("devtools")) install.packages("devtools"); library(devtools)
 # Packages for Data manipulation
 if (!require("readODS")) install.packages("readODS"); library(readODS)
 if (!require("readxl")) install.packages("readxl"); library(readxl)
+if (!require("readr")) install.packages("readr"); library(readr)
+if (!require("XML")) install.packages("XML"); library(XML)
 if (!require("openxlsx")) install.packages("openxlsx"); library(openxlsx)
 if (!require("dplyr")) install.packages("dplyr"); library(dplyr)
 
@@ -64,17 +66,9 @@ if (!require("manipulateWidget")) install.packages("manipulateWidget"); library(
   # 
 
 # Define some paths
-htmlpath <- "html"
-
-#read_ods(path = NULL, sheet = 1, col_names = TRUE, col_types = NULL, na = "", skip = 0, formula_as_formula = FALSE, range = NULL)
-#read_ods("table.ods", header = TRUE) ## return only the first sheet
-#read_ods("multisheet.ods", sheet = 2, formula_as_formula = TRUE) ## return the second sheet with formula read as formula
-
-#My Data File (relative path from home folder)
-#mdf <- file.path("~", "Dropbox", "Bolets", "zamiaDroid", "Citations", "000000_bolets_Zamia_TAB_v02.ods")
-# My Data
-#md  <- read_ods(path = mdf, sheet = 1, col_names = TRUE, col_types = NULL, na = "", skip = 0, formula_as_formula = FALSE, range = NULL)
-#head(md)
+path.html     <- "html"
+path.data     <- file.path("~", "Dropbox", "Bolets", "zamiaDroid", "Citations", "00_data")
+path.results  <- file.path("~", "Dropbox", "Bolets", "zamiaDroid", "Citations", "00_results")
 
 # =======================================================
 # Former 2nd approach: Use readr to import a csv file
@@ -83,18 +77,38 @@ htmlpath <- "html"
 
 # ### Dataset
 # #read datasets
-require(readr)
-data.dir  <- file.path("~", "Dropbox", "Bolets", "zamiaDroid", "Citations", "00_data")
-setwd(data.dir)
+setwd(path.data)
 # #data.file <- "20140000_20170900_bolets_Zamia_TAB_Xavier_dePedro.csv"
 # data.file <- "20140000_20171014_bolets_Zamia_TAB.csv"
-temp = list.files(path=data.dir, pattern="*.tab", full.names = T)
-myfiles = lapply(temp, read_tsv)
+temp = list.files(path=path.data, pattern="*.tab", full.names = T)
+myfiles = lapply(temp, readr::read_tsv)
 
 #Combine files. derived from https://stackoverflow.com/a/11433532
-md <- dplyr::bind_rows(myfiles) 
-
+md.orig <- dplyr::bind_rows(myfiles) 
+md <- md.orig
 ```
+
+## Add unique CitationId (cid) and remove duplicates
+```{r Add unique CitationId (cid)}
+cid <- format.Date(md$Date, "%y%m%d_%H%M%S")
+md <- dplyr::bind_cols(list(data.frame(cid), md)) 
+tail(md)
+md <- md %>% 
+  arrange(cid)
+tail(md)
+# Mostra duplicats
+# Return all duplicated elements
+md.dups <- md %>%
+  filter(duplicated(md) | duplicated(md, fromLast = TRUE))
+
+# Remove duplicates with efficient function (distinct from dplyr)
+# Remove duplicated rows based on Sepal.Length
+md <- md %>% distinct(cid, .keep_all = TRUE)
+
+rbind(head(md.orig),tail(md.orig))
+rbind(head(md),tail(md))
+```
+
 ## Tidy data set
 
 ```{r Tidy data set, echo=FALSE}
@@ -109,6 +123,7 @@ names(md2)[ncol(md2)] <-  "Longitude"
 md2$Latitude <- as.numeric(levels(md2$Latitude))[md2$Latitude]
 md2$Longitude <- as.numeric(levels(md2$Longitude))[md2$Longitude]
 md <- md2
+rm(md2)
 
 # Clean up data and fix oddities for R
 md$Date <- as.POSIXct(strptime(md$Date, "%Y-%m-%d %H:%M:%S"))
@@ -120,51 +135,130 @@ md$Pendent <- as.numeric(md$Pendent)
 md$`nom vulgar (comestible)` <- as.factor(md$`nom vulgar (comestible)`)
 md$`nom vulgar (no comestible)` <- as.factor(md$`nom vulgar (no comestible)`)
 
-head(md)
+rbind(head(md),
+      tail(md))
 ```
 
-## Add altitude
+## Add Missing Altitudes and Toponimc Location info
 
-```{r Add altitude}
-# See https://stackoverflow.com/a/8975851
-# You can use the package that looks up from geonames, and get the value from the srtm3 digital elevation model:
-# 
-# > require(geonames)
-# > GNsrtm3(54.481084,-3.220625)
-#   srtm3       lng      lat
-# 1   797 -3.220625 54.48108
-# 
-# or the gtopo30 model:
-# 
-# > GNgtopo30(54.481084,-3.220625)
-#   gtopo30       lng      lat
-# 1     520 -3.220625 54.48108
-# 
-# geonames is on CRAN so install.packages("geonames") will get it.
-#No geonamesUsername set. See http://geonames.wordpress.com/2010/03/16/ddos-part-ii/ and set one with options(geonamesUsername="foo") for some services to work
-options(geonamesUsername="xavidp") 
-GNsrtm3(54.481084,-3.220625)
+```{r Add Missing Altitudes}
+fname.extra.info <- paste0("_120000_", format(Sys.Date(), "%y%m"), "00_extra_info.csv")
 
-alcada_srtm3 <- list()
-alcada_gtopo30 <- list()
-
-for (i in 1:nrow(md)) {
-  if (!is.na(md$Latitude[i])) {
-    alcada_srtm3[[i]] <- GNsrtm3(md$Latitude[i], md$Longitude[i])
-    alcada_gtopo30[[i]] <- GNgtopo30(md$Latitude[i], md$Longitude[i])
-  } else {
-    alcada_srtm3[[i]] <- c("-", NA, NA)
-    alcada_gtopo30[[i]] <- c("-", NA, NA)
-  }
+if (file.exists(file.path(path.data, fname.extra.info))) {
+ extra.info.tmp <- readr::read_csv(file.path(path.data, fname.extra.info))  
+} else {
+  extra.info.tmp <- data.frame("NA")
+  colnames(extra.info.tmp)[1] <- "cid"
 }
 
-# convert list of results into data.frame
-alcada_srtm3.df <- do.call(rbind.data.frame, alcada_srtm3)
-alcada_gtopo30.df <- do.call(rbind.data.frame, alcada_gtopo30)
+# Remove redundant columns  from extra.info.tmp
+extra.info.tmp <- extra.info.tmp %>%
+  select(-Latitude,
+         -Longitude)
+# Merge alçada from csv file to new md read from csv filers from disk
+md.new <- dplyr::anti_join(md, extra.info.tmp, by="cid")
+md.old <- dplyr::inner_join(md, extra.info.tmp, by="cid")
 
-md <- md %>% 
-  mutate(alcada_srtm3=alcada_srtm3.df$srtm3) %>%
-  mutate(alcada_gtopo30=alcada_gtopo30.df$gtopo30)
+if (nrow(md.new) > 0 ) {
+  # Geo altitude for the missing data points
+  # From geonames
+  
+  # See https://stackoverflow.com/a/8975851
+  # You can use the package that looks up from geonames, and get the value from the srtm3 digital elevation model:
+  # 
+  # > require(geonames)
+  # > GNsrtm3(54.481084,-3.220625)
+  #   srtm3       lng      lat
+  # 1   797 -3.220625 54.48108
+  # 
+  # or the gtopo30 model:
+  # 
+  # > GNgtopo30(54.481084,-3.220625)
+  #   gtopo30       lng      lat
+  # 1     520 -3.220625 54.48108
+  # 
+  # geonames is on CRAN so install.packages("geonames") will get it.
+  #No geonamesUsername set. See http://geonames.wordpress.com/2010/03/16/ddos-part-ii/ and set one with options(geonamesUsername="foo") for some services to work
+  options(geonamesUsername="xavidp") 
+  #GNsrtm3(54.481084,-3.220625)
+  
+  # Define empty lists to store temporary information retrieved by geonames servers 
+  alcada_srtm3 <- list()
+  alcada_gtopo30 <- list()
+  lloc <- list()
+  data.xml <- list()
+  data <- list()
+  
+  # For each step [i], keep CitationId (md$cid[i]) also just in case
+  for (i in 1:nrow(md.new)) {
+    # Comprova si tenim valor de Latitude o no tenim coordenades
+    if (!is.na(md.new$Latitude[i])) {
+      # Get altitude info from elevation models
+      alcada_srtm3[[i]] <- c(md.new$cid[i], GNsrtm3(md.new$Latitude[i], md.new$Longitude[i]))
+      alcada_gtopo30[[i]] <- c(md.new$cid[i], GNgtopo30(md.new$Latitude[i], md.new$Longitude[i]))
+      # Get Location info
+      data.xml[[i]] <- xmlParse(paste0("http://api.geonames.org/extendedFindNearby?lat=", # long (extendedFindNearby)
+                                 md.new$Latitude[i], "&lng=", # long (extendedFindNearby)
+                                 md.new$Longitude[i], "&username=xavidp") # long (extendedFindNearby)
+                                ) # long (extendedFindNearby)
+      data[[i]] <- xmlToList(data.xml[[i]]) # long (extendedFindNearby)
+    
+      # Recupera les dades d'interès, amb coordenades primer per garantir que tenim dataframe sencer
+      # fins i tot en casos en que no obtenim res com a noms de lloc
+      lloc[[i]] <- c(md.new$cid[i],
+                     md.new$Latitude[i],
+                     md.new$Longitude[i],
+                     data[[i]][length(data[[i]])-2]$geoname$toponymName, # Província - en català
+                     data[[i]][length(data[[i]])-1]$geoname$toponymName, # Ciutat
+                     data[[i]][length(data[[i]])  ]$geoname$toponymName  # Nom toponímic (lloc)
+                     )
+      } else {
+        # No tenim coordenades per a aquesta citació, per la raó que sigui
+      alcada_srtm3[[i]]   <- c(md.new$cid[i], "-", NA, NA)
+      alcada_gtopo30[[i]] <- c(md.new$cid[i], "-", NA, NA)
+      lloc[[i]]           <- c(md.new$cid[i], "-", ".", NA, NA, NA)
+    }
+  }
+  
+  # convert list of results into data.frame
+  alcada_srtm3.df   <- do.call(rbind.data.frame, alcada_srtm3)
+  alcada_gtopo30.df <- do.call(rbind.data.frame, alcada_gtopo30)
+  lloc.df           <- do.call(rbind.data.frame, lloc)
+  colnames(lloc.df) <- c("cid", "Lat", "Lon", "Província", "Ciutat", "Nom_toponímic")
+
+  }
+
+# Add columns with extra info to md.new df
+md.new <- md.new %>%
+  mutate(alcada_srtm3=alcada_srtm3.df$srtm3,
+         alcada_gtopo30=alcada_gtopo30.df$gtopo30,
+         "Província"=lloc.df$Província,
+         "Ciutat"=lloc.df$Ciutat,
+         "Nom_toponímic"=lloc.df$Nom_toponímic
+         )
+  
+# Combine md.old rows with md.new rows to make the updated md
+md <- rbind(md.old, md.new)
+
+#lloc.df %>% filter(str_detect(Ciutat, "[a-zA-Z]"))
+#lloc.df %>% filter(str_detect(Ciutat, "[:digit:]"))
+
+
+# Save partial results to prevent overquerying the geonames server
+extra.info <- md %>% 
+  filter(str_detect(Ciutat, "[a-zA-Z]")) %>%
+  select(cid,
+         Latitude,
+         Longitude,
+         alcada_srtm3,
+         alcada_gtopo30,
+         "Província",
+         "Ciutat",
+         "Nom_toponímic"
+         )
+# Desa arxiu amb extra info a disc per poder reemprar la info posteriors vegades
+readr::write_csv(extra.info, file.path(path.data, fname.extra.info))
+
 
 # Or this: https://stackoverflow.com/a/41773871
 # to use googleway package with an api key
@@ -173,88 +267,133 @@ md <- md %>%
 ## Add nearest city info
 
 ```{r Add nearest city info}
-# See: https://stackoverflow.com/a/42320195
-
-# Here is a quick solution to reverse geocoding in ggmap:
-# 
-#library(ggmap)
-# 
-# > coords
-#         lon      lat
-# 1  37.61730 55.75583
-# 2 116.40739 39.90421
-# 3 -77.03687 38.90719
-# 
-# res <- lapply(with(coords, paste(lat, lon, sep = ",")), geocode, output = "more")
-#res <- lapply(with(md, paste(Latitude, Longitude, sep = ",")), geocode, output = "more")
-
-# 
-# 
-# > transform(coords, city = sapply(res, "[[", "locality"))
-#         lon      lat       city
-# 1  37.61730 55.75583     Moskva
-# 2 116.40739 39.90421    Beijing
-# 3 -77.03687 38.90719 Washington
-
-#Another approachm using geonames
-require(XML)
-#data <- xmlParse("http://api.geonames.org/findNearby?lat=41.804690&lng=2.100230&username=xavidp")
-# Coordinates from Castellterçol
-
-data2 <- xmlParse("http://api.geonames.org/findNearby?lat=41.65926673&lng=2.52292308&username=xavidp")
-xml_data2 <- xmlToList(data2)
-xml_data2$geoname$toponymName
-
-
-
-#xml_data <- xmlToList(data)
-#xml_data$geoname$toponymName
-#[1] "Comarca del Moianès"
-#xml_data$geoname$name
-#[1] "Comarca del Moianès"
-
-nom_lloc <- list()
-data <- list()
-
-for (i in 1:nrow(md)) {
-  if (!is.na(md$Latitude[i])) {
-      data[[i]] <- xmlToList(xmlParse(paste0("http://api.geonames.org/findNearby?lat=", 
-                                         md$Latitude[i], "&lng=",
-                                         md$Longitude[i], "&username=xavidp")))
-      if (grep("has been exceeded", data[[589]]$status, fixed=T)) {
-        nom_lloc[[i]] <- c(rep("-",4))
-        cat("Hourly limit exceeded\n")
-      } else {
-          nom_lloc[[i]] <- c(md$Latitude[i],
-                             md$Longitude[i],
-                             data[[i]]$geoname$toponymName,
-                             data[[i]]$geoname$name)
-      }
-
-  } else {
-    nom_lloc[[i]] <- c(NA, NA, "-", "-")
+if (FALSE) {
+  # Set als FALSE as it's been implemented in previous chunks
+  # See: https://stackoverflow.com/a/42320195
+  
+  # Here is a quick solution to reverse geocoding in ggmap:
+  # 
+  #library(ggmap)
+  # 
+  # > coords
+  #         lon      lat
+  # 1  37.61730 55.75583
+  # 2 116.40739 39.90421
+  # 3 -77.03687 38.90719
+  # 
+  # res <- lapply(with(coords, paste(lat, lon, sep = ",")), geocode, output = "more")
+  #res <- lapply(with(md, paste(Latitude, Longitude, sep = ",")), geocode, output = "more")
+  
+  # 
+  # 
+  # > transform(coords, city = sapply(res, "[[", "locality"))
+  #         lon      lat       city
+  # 1  37.61730 55.75583     Moskva
+  # 2 116.40739 39.90421    Beijing
+  # 3 -77.03687 38.90719 Washington
+  
+  #Another approachm using geonames
+  require(XML)
+  #data <- xmlParse("http://api.geonames.org/findNearby?lat=41.804690&lng=2.100230&username=xavidp")
+  # Coordinates from Castellterçol
+  if (FALSE) {
+    data2 <- xmlParse("http://api.geonames.org/findNearby?lat=41.65926673&lng=2.52292308&username=xavidp")
+    xml_data2 <- xmlToList(data2)
+    xml_data2$geoname$toponymName
   }
+  if (FALSE) {
+    
+    # Extended find nearby
+    data3 <- xmlParse("http://api.geonames.org/extendedFindNearby?lat=41.65926673&lng=2.52292308&username=xavidp")
+    data3 <- xmlParse("http://api.geonames.org/extendedFindNearby?lat=41.94516782&lng=1.33559261&username=xavidp")
+    xml_data3 <- xmlToList(data3)
+    xml_data3[[length(xml_data3)]] # Mostra el darrer nom de geonames
+    
+    lloc <- list
+    lloc <- c(xml_data3[[length(xml_data3)-2]]$toponymName, # Província - en català
+              xml_data3[[length(xml_data3)-1]]$toponymName, # Ciutat
+              xml_data3[[length(xml_data3)]]$toponymName # Nom toponímic (lloc)
+    ) 
+  }
+  
+  
+  
+  #xml_data <- xmlToList(data)
+  #xml_data$geoname$toponymName
+  #[1] "Comarca del Moianès"
+  #xml_data$geoname$name
+  #[1] "Comarca del Moianès"
+  
+  lloc <- list()
+  data.xml <- list()
+  data <- list()
+  
+  for (i in 1:nrow(md)) {
+    if (!is.na(md$Latitude[i])) {
+      #      data[[i]] <- xmlToList(xmlParse(paste0("http://api.geonames.org/extendedFindNearby?lat=", # short (findNearby)
+      #                                         md$Latitude[i], "&lng=", short (findNearby)
+      #                                         md$Longitude[i], "&username=xavidp"))) short (findNearby)
+      data.xml[[i]] <- xmlParse(paste0("http://api.geonames.org/extendedFindNearby?lat=", # long (extendedFindNearby)
+                                       md$Latitude[i], "&lng=", # long (extendedFindNearby)
+                                       md$Longitude[i], "&username=xavidp") # long (extendedFindNearby)
+      ) # long (extendedFindNearby)
+      data[[i]] <- xmlToList(data.xml[[i]]) # long (extendedFindNearby)
+      
+      # Recupera les dades d'interès, amb coordenades primer per garantir que tenim dataframe sencer
+      # fins i tot en casos en que3 no obtenim res com a noms de lloc
+      lloc[[i]] <- c(md$cid[i],
+                     md$Latitude[i],
+                     md$Longitude[i],
+                     # data[[i]]$geoname$toponymName, # variable quan es cerca via findNearby
+                     # data[[i]]$geoname$name) # variable quan es cerca via findNearby
+                     data[[i]][length(data[[i]])-2]$geoname$toponymName, # Província - en català
+                     data[[i]][length(data[[i]])-1]$geoname$toponymName, # Ciutat
+                     data[[i]][length(data[[i]])  ]$geoname$toponymName  # Nom toponímic (lloc)
+      )
+      
+    } else {
+      lloc[[i]] <- c(md$cid[i], NA, NA, "-", "-", "-")
+    }
+  }
+  
+  # convert list of results into data.frame
+  lloc.df <- do.call(rbind.data.frame, lloc)
+  colnames(lloc.df) <- c("Lat", "Lon", "Província", "Ciutat", "Nom_toponímic")
+  md <- md %>% 
+    mutate("Província"=lloc.df$Província,
+           "Ciutat"=lloc.df$Ciutat,
+           "Nom_toponímic"=lloc.df$Nom_toponímic
+    )
+  
+  # Alternative way of reverse geocoding: using Here Maps and account
+  #https://developer.here.com/api-explorer/rest/geocoder/reverse-geocode
 }
-
-# convert list of results into data.frame
-nom_lloc.df <- do.call(rbind.data.frame, nom_lloc)
-colnames(nom_lloc.df) <- c("Lat", "Lon", "Comarca", "Lloc")
-md <- md %>% 
-  mutate(nom_comarca=nom_lloc.df[3],
-         nom_lloc=nom_lloc.df[4])
-
-
 ```
+
 ## Get historical wheather data (rainfall, temp)
 
-rwunderground: R Interface to Weather Underground API
-
-Tools for getting historical weather information and forecasts from wunderground.com. Historical weather and forecast data includes, but is not limited to, temperature, humidity, windchill, wind speed, dew point, heat index. Additionally, the weather underground weather API also includes information on sunrise/sunset, tidal conditions, satellite/webcam imagery, weather alerts, hurricane alerts and historical high/low temperatures.
-
-https://cran.r-project.org/web/packages/rwunderground/index.html
-
 ```{r}
-# See https://cran.r-project.org/web/packages/rwunderground/index.html
+# rwunderground: R Interface to Weather Underground API
+# 
+# Tools for getting historical weather information and forecasts from wunderground.com. Historical weather and forecast data includes, but is not limited to, temperature, humidity, windchill, wind speed, dew point, heat index. Additionally, the weather underground weather API also includes information on sunrise/sunset, tidal conditions, satellite/webcam imagery, weather alerts, hurricane alerts and historical high/low temperatures.
+# 
+# https://cran.r-project.org/web/packages/rwunderground/index.html
+
+# Open Weather Map
+# https://openweathermap.org/price
+# ----------------------------------
+# 10 USD for 6 year of historical wheater data for a given city
+# https://openweathermap.org/history
+# https://openweathermap.org/history-bulk
+
+
+# Agromonitoring 
+# ----------------------------------
+# See 
+# https://agromonitoring.com/api/history-weather
+# https://agromonitoring.com/api/accumulated-precipitation
+# However historical rainfall is for paid subscription palnms only
+# https://agromonitoring.com/price
 ```
 
 
@@ -262,8 +401,9 @@ https://cran.r-project.org/web/packages/rwunderground/index.html
 
 ```{r}
 str(md)
-write_csv(md, "00_data.csv")
-openxlsx::write.xlsx(md, file = "00_data.xlsx")
+results.fname.noext <- paste0("00_data_up_to_", format(Sys.Date(), "%y%m"))
+readr::write_csv(md, paste0(results.fname.noext,".csv"))
+openxlsx::write.xlsx(md, file = paste0(results.fname.noext, ".xlsx"))
 
 ```
 
@@ -284,11 +424,11 @@ dt.data <- datatable(md[5:10],  filter = 'top', extensions="Scroller",
   )
 
 
-#saveWidget(ct.map.table.all, file=file.path(getwd(), htmlpath, "ct.map.table.all.html"), selfcontained=TRUE) 
+#saveWidget(ct.map.table.all, file=file.path(getwd(), path.html, "ct.map.table.all.html"), selfcontained=TRUE) 
 
 # Save chart as html on disk
 htmltools::save_html(dt.data, 
-                     file.path(getwd(), htmlpath, "table.all.html")
+                     file.path(getwd(), path.html, "table.all.html")
                      )
 
 ```
@@ -315,7 +455,7 @@ pt.md <- rpivotTable(
   rendererName = "Heatmap"
   )
 frameWidget(pt.md)
-saveWidget(pt.md, file=file.path(getwd(), htmlpath, "boleteRa.pivotTable.html"), selfcontained=TRUE) 
+saveWidget(pt.md, file=file.path(getwd(), path.html, "boleteRa.pivotTable.html"), selfcontained=TRUE) 
 
 #pt.md
 
@@ -464,15 +604,15 @@ ct.map.table.all <- bscols(
               )
 )
 
-#saveWidget(ct.map.table.all, file=file.path(getwd(), htmlpath, "ct.map.table.all.html"), selfcontained=TRUE) 
+#saveWidget(ct.map.table.all, file=file.path(getwd(), path.html, "ct.map.table.all.html"), selfcontained=TRUE) 
 
 # Save chart as html on disk
 htmltools::save_html(ct.map.table.all, 
-                     file.path(getwd(), htmlpath, "map.table.all.html")
+                     file.path(getwd(), path.html, "map.table.all.html")
                      )
 
-webshot(file.path(getwd(), htmlpath, "map.table.all.html"),
-        file=file.path(getwd(), htmlpath, "map.table.all.png"),
+webshot(file.path(getwd(), path.html, "map.table.all.html"),
+        file=file.path(getwd(), path.html, "map.table.all.png"),
         delay=0.5)
 
 ct.map.table.all
