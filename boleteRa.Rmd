@@ -236,9 +236,19 @@ md.new <- md.new %>%
          "Ciutat"=lloc.df$Ciutat,
          "Nom_toponímic"=lloc.df$Nom_toponímic
          )
-  
+
 # Combine md.old rows with md.new rows to make the updated md
 md <- rbind(md.old, md.new)
+
+
+if (FALSE){
+md <- rbind(md.orig, md.new)
+md <- md %>%
+  arrange(cid)
+
+  fname.md.new.edited <- paste0("_120000_", format(Sys.Date(), "%y%m"), "00_md.new.edited.csv")
+  md.new.edited <- readr::read_csv(file.path(path.data, fname.md.new.edited))
+}
 
 #lloc.df %>% filter(str_detect(Ciutat, "[a-zA-Z]"))
 #lloc.df %>% filter(str_detect(Ciutat, "[:digit:]"))
@@ -256,9 +266,21 @@ extra.info <- md %>%
          "Ciutat",
          "Nom_toponímic"
          )
+
+if (FALSE){
+  md.new <- md.new.edited %>%
+    filter(is.na(Ciutat)) %>%
+    select(-Latitude,
+         -Longitude,
+         -alcada_srtm3,
+         -alcada_gtopo30,
+         -Província,
+         -Ciutat,
+         -Nom_toponímic)
+}
+
 # Desa arxiu amb extra info a disc per poder reemprar la info posteriors vegades
 readr::write_csv(extra.info, file.path(path.data, fname.extra.info))
-
 
 # Or this: https://stackoverflow.com/a/41773871
 # to use googleway package with an api key
@@ -397,13 +419,13 @@ if (FALSE) {
 ```
 
 
-## Save Spreadsheet and csv (just in case)
+## Save extended results data set as Spreadsheet and csv (just in case)
 
-```{r}
-str(md)
-results.fname.noext <- paste0("00_data_up_to_", format(Sys.Date(), "%y%m"))
-readr::write_csv(md, paste0(results.fname.noext,".csv"))
-openxlsx::write.xlsx(md, file = paste0(results.fname.noext, ".xlsx"))
+```{r Save extended results data set as Spreadsheet and csv (just in case)}
+#str(md)
+results.fname.noext <- paste0("_120000_", format(Sys.Date(), "%y%m"), "00_data")
+readr::write_csv(md, file.path(path.data, paste0(results.fname.noext,".csv")))
+openxlsx::write.xlsx(md, file = file.path(path.data, paste0(results.fname.noext, ".xlsx")))
 
 ```
 
