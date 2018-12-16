@@ -111,7 +111,7 @@ md2$Longitude <- as.numeric(levels(md2$Longitude))[md2$Longitude]
 md <- md2
 
 # Clean up data and fix oddities for R
-md$Date <- strptime(md$Date, "%Y-%m-%d %H:%M:%S")
+md$Date <- as.POSIXct(strptime(md$Date, "%Y-%m-%d %H:%M:%S"))
 #d$Pendent[is.na(md$Pendent)] <- "99"
 md$Abundància <- gsub("[^0-9]", "", md$Abundància) 
 md$Abundància <- as.numeric(md$Abundància)
@@ -145,8 +145,26 @@ head(md)
 options(geonamesUsername="xavidp") 
 GNsrtm3(54.481084,-3.220625)
 
+alcada_srtm3 <- list()
+alcada_gtopo30 <- list()
 
+for (i in 1:nrow(md)) {
+  if (!is.na(md$Latitude[i])) {
+    alcada_srtm3[[i]] <- GNsrtm3(md$Latitude[i], md$Longitude[i])
+    alcada_gtopo30[[i]] <- GNgtopo30(md$Latitude[i], md$Longitude[i])
+  } else {
+    alcada_srtm3[[i]] <- c("-", NA, NA)
+    alcada_gtopo30[[i]] <- c("-", NA, NA)
+  }
+}
 
+# convert list of results into data.frame
+alcada_srtm3.df <- do.call(rbind.data.frame, alcada_srtm3)
+alcada_gtopo30.df <- do.call(rbind.data.frame, alcada_gtopo30)
+
+md <- md %>% 
+  mutate(alcada_srtm3=alcada_srtm3.df$srtm3) %>%
+  mutate(alcada_gtopo30=alcada_gtopo30.df$gtopo30)
 
 # Or this: https://stackoverflow.com/a/41773871
 # to use googleway package with an api key
@@ -159,7 +177,7 @@ GNsrtm3(54.481084,-3.220625)
 
 # Here is a quick solution to reverse geocoding in ggmap:
 # 
-# library(ggmap)
+#library(ggmap)
 # 
 # > coords
 #         lon      lat
@@ -168,6 +186,8 @@ GNsrtm3(54.481084,-3.220625)
 # 3 -77.03687 38.90719
 # 
 # res <- lapply(with(coords, paste(lat, lon, sep = ",")), geocode, output = "more")
+#res <- lapply(with(md, paste(Latitude, Longitude, sep = ",")), geocode, output = "more")
+
 # 
 # 
 # > transform(coords, city = sapply(res, "[[", "locality"))
@@ -176,7 +196,65 @@ GNsrtm3(54.481084,-3.220625)
 # 2 116.40739 39.90421    Beijing
 # 3 -77.03687 38.90719 Washington
 
+#Another approachm using geonames
+require(XML)
+#data <- xmlParse("http://api.geonames.org/findNearby?lat=41.804690&lng=2.100230&username=xavidp")
+# Coordinates from Castellterçol
 
+data2 <- xmlParse("http://api.geonames.org/findNearby?lat=41.65926673&lng=2.52292308&username=xavidp")
+xml_data2 <- xmlToList(data2)
+xml_data2$geoname$toponymName
+
+
+
+#xml_data <- xmlToList(data)
+#xml_data$geoname$toponymName
+#[1] "Comarca del Moianès"
+#xml_data$geoname$name
+#[1] "Comarca del Moianès"
+
+nom_lloc <- list()
+data <- list()
+
+for (i in 1:nrow(md)) {
+  if (!is.na(md$Latitude[i])) {
+      data[[i]] <- xmlToList(xmlParse(paste0("http://api.geonames.org/findNearby?lat=", 
+                                         md$Latitude[i], "&lng=",
+                                         md$Longitude[i], "&username=xavidp")))
+      if (grep("has been exceeded", data[[589]]$status, fixed=T)) {
+        nom_lloc[[i]] <- c(rep("-",4))
+        cat("Hourly limit exceeded\n")
+      } else {
+          nom_lloc[[i]] <- c(md$Latitude[i],
+                             md$Longitude[i],
+                             data[[i]]$geoname$toponymName,
+                             data[[i]]$geoname$name)
+      }
+
+  } else {
+    nom_lloc[[i]] <- c(NA, NA, "-", "-")
+  }
+}
+
+# convert list of results into data.frame
+nom_lloc.df <- do.call(rbind.data.frame, nom_lloc)
+colnames(nom_lloc.df) <- c("Lat", "Lon", "Comarca", "Lloc")
+md <- md %>% 
+  mutate(nom_comarca=nom_lloc.df[3],
+         nom_lloc=nom_lloc.df[4])
+
+
+```
+## Get historical wheather data (rainfall, temp)
+
+rwunderground: R Interface to Weather Underground API
+
+Tools for getting historical weather information and forecasts from wunderground.com. Historical weather and forecast data includes, but is not limited to, temperature, humidity, windchill, wind speed, dew point, heat index. Additionally, the weather underground weather API also includes information on sunrise/sunset, tidal conditions, satellite/webcam imagery, weather alerts, hurricane alerts and historical high/low temperatures.
+
+https://cran.r-project.org/web/packages/rwunderground/index.html
+
+```{r}
+# See https://cran.r-project.org/web/packages/rwunderground/index.html
 ```
 
 
