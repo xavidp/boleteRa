@@ -240,16 +240,6 @@ md.new <- md.new %>%
 # Combine md.old rows with md.new rows to make the updated md
 md <- rbind(md.old, md.new)
 
-
-if (FALSE){
-md <- rbind(md.orig, md.new)
-md <- md %>%
-  arrange(cid)
-
-  fname.md.new.edited <- paste0("_120000_", format(Sys.Date(), "%y%m"), "00_md.new.edited.csv")
-  md.new.edited <- readr::read_csv(file.path(path.data, fname.md.new.edited))
-}
-
 #lloc.df %>% filter(str_detect(Ciutat, "[a-zA-Z]"))
 #lloc.df %>% filter(str_detect(Ciutat, "[:digit:]"))
 
@@ -267,18 +257,6 @@ extra.info <- md %>%
          "Nom_toponímic"
          )
 
-if (FALSE){
-  md.new <- md.new.edited %>%
-    filter(is.na(Ciutat)) %>%
-    select(-Latitude,
-         -Longitude,
-         -alcada_srtm3,
-         -alcada_gtopo30,
-         -Província,
-         -Ciutat,
-         -Nom_toponímic)
-}
-
 # Desa arxiu amb extra info a disc per poder reemprar la info posteriors vegades
 readr::write_csv(extra.info, file.path(path.data, fname.extra.info))
 
@@ -286,9 +264,9 @@ readr::write_csv(extra.info, file.path(path.data, fname.extra.info))
 # to use googleway package with an api key
 ```
 
-## Add nearest city info
+## Chunk to debug dummy data - temporary urls for fetching nearest city info
 
-```{r Add nearest city info}
+```{r Chunk to debug dummy data - temporary urls for fetching nearest city info}
 if (FALSE) {
   # Set als FALSE as it's been implemented in previous chunks
   # See: https://stackoverflow.com/a/42320195
@@ -345,47 +323,6 @@ if (FALSE) {
   #[1] "Comarca del Moianès"
   #xml_data$geoname$name
   #[1] "Comarca del Moianès"
-  
-  lloc <- list()
-  data.xml <- list()
-  data <- list()
-  
-  for (i in 1:nrow(md)) {
-    if (!is.na(md$Latitude[i])) {
-      #      data[[i]] <- xmlToList(xmlParse(paste0("http://api.geonames.org/extendedFindNearby?lat=", # short (findNearby)
-      #                                         md$Latitude[i], "&lng=", short (findNearby)
-      #                                         md$Longitude[i], "&username=xavidp"))) short (findNearby)
-      data.xml[[i]] <- xmlParse(paste0("http://api.geonames.org/extendedFindNearby?lat=", # long (extendedFindNearby)
-                                       md$Latitude[i], "&lng=", # long (extendedFindNearby)
-                                       md$Longitude[i], "&username=xavidp") # long (extendedFindNearby)
-      ) # long (extendedFindNearby)
-      data[[i]] <- xmlToList(data.xml[[i]]) # long (extendedFindNearby)
-      
-      # Recupera les dades d'interès, amb coordenades primer per garantir que tenim dataframe sencer
-      # fins i tot en casos en que3 no obtenim res com a noms de lloc
-      lloc[[i]] <- c(md$cid[i],
-                     md$Latitude[i],
-                     md$Longitude[i],
-                     # data[[i]]$geoname$toponymName, # variable quan es cerca via findNearby
-                     # data[[i]]$geoname$name) # variable quan es cerca via findNearby
-                     data[[i]][length(data[[i]])-2]$geoname$toponymName, # Província - en català
-                     data[[i]][length(data[[i]])-1]$geoname$toponymName, # Ciutat
-                     data[[i]][length(data[[i]])  ]$geoname$toponymName  # Nom toponímic (lloc)
-      )
-      
-    } else {
-      lloc[[i]] <- c(md$cid[i], NA, NA, "-", "-", "-")
-    }
-  }
-  
-  # convert list of results into data.frame
-  lloc.df <- do.call(rbind.data.frame, lloc)
-  colnames(lloc.df) <- c("Lat", "Lon", "Província", "Ciutat", "Nom_toponímic")
-  md <- md %>% 
-    mutate("Província"=lloc.df$Província,
-           "Ciutat"=lloc.df$Ciutat,
-           "Nom_toponímic"=lloc.df$Nom_toponímic
-    )
   
   # Alternative way of reverse geocoding: using Here Maps and account
   #https://developer.here.com/api-explorer/rest/geocoder/reverse-geocode
