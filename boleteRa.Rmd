@@ -19,6 +19,7 @@ if (!require("readr")) install.packages("readr"); library(readr)
 if (!require("XML")) install.packages("XML"); library(XML)
 if (!require("openxlsx")) install.packages("openxlsx"); library(openxlsx)
 if (!require("dplyr")) install.packages("dplyr"); library(dplyr)
+if (!require("tidyr")) install.packages("tidyr"); library(tidyr)
 
 # Packages for Html5 Output manipulation
 # Add package widget frame so that we attempt to get responsive iframes produced by htmlwidgets
@@ -69,6 +70,7 @@ if (!require("manipulateWidget")) install.packages("manipulateWidget"); library(
 path.html     <- "html"
 path.data     <- file.path("~", "Dropbox", "Bolets", "zamiaDroid", "Citations", "00_data")
 path.results  <- file.path("~", "Dropbox", "Bolets", "zamiaDroid", "Citations", "00_results")
+path.photos   <- file.path("~", "Sync", "BQa5_Zamiadroid", "Photos")
 
 # =======================================================
 # Former 2nd approach: Use readr to import a csv file
@@ -109,6 +111,37 @@ rbind(head(md.orig),tail(md.orig))
 rbind(head(md),tail(md))
 ```
 
+## Clean path from fotos
+
+```{r}
+table.foto.paths <- table(dirname(unlist(strsplit(as.character(md$foto), "; "))))
+table.foto.paths
+
+for (ii in 1:length(names(table.foto.paths))) {
+  md$foto <- gsub(paste0(names(table.foto.paths)[ii], "/"), "", md$foto, fixed="T")
+}
+```
+## Check that photo exists
+
+```{r Check that photo exists}
+# Check that photo exists and how many are there
+pic.count <- list()
+for (ii in 1:length(md$foto)){
+  pic.count[[ii]] <- table(file.exists(file.path(path.photos, strsplit(md$foto, "; ")[[ii]])))["TRUE"]
+}
+pic.count.df <- do.call(rbind.data.frame, pic.count)
+colnames(pic.count.df) <- "n.pics"
+table(pic.count.df$n.pics)
+
+md <- md %>% 
+  mutate(pics = pic.count.df$n.pics)
+
+md.missing.pics <- md[which(is.na(md$pics)),]
+md.missing.pics
+#table(file.exists(file.path(path.photos, md$foto)))
+
+```
+
 ## Tidy data set
 
 ```{r Tidy data set, echo=FALSE}
@@ -137,6 +170,23 @@ md$`nom vulgar (no comestible)` <- as.factor(md$`nom vulgar (no comestible)`)
 
 rbind(head(md),
       tail(md))
+```
+
+## Remove some secondary columns
+```{r Remove some secondary columns}
+md <- md %>%
+  select(-CitationCoordinates,
+         -SecondaryCitationCoordinates,
+         -X,
+         -Y,
+         -"poligon?",
+         -Autor
+         ) 
+md <- md %>%
+  unite(Descripcio_Lloc, "descripció lloc","Descripció del lloc")
+md$Descripcio_Lloc <- gsub("_NA", "", md$Descripcio_Lloc)
+md$Descripcio_Lloc <- gsub("NA_", "", md$Descripcio_Lloc)
+
 ```
 
 ## Add Missing Altitudes and Toponimc Location info
@@ -224,7 +274,16 @@ if (nrow(md.new) > 0 ) {
   alcada_srtm3.df   <- do.call(rbind.data.frame, alcada_srtm3)
   alcada_gtopo30.df <- do.call(rbind.data.frame, alcada_gtopo30)
   lloc.df           <- do.call(rbind.data.frame, lloc)
-  colnames(lloc.df) <- c("cid", "Lat", "Lon", "Província", "Ciutat", "Nom_toponímic")
+  if (length(colnames(lloc.df))>3) {
+    colnames(lloc.df) <- c("cid", "Lat", "Lon", "Província", "Ciutat", "Nom_toponímic")
+  } else {
+    colnames(lloc.df) <- c("cid", "Lat", "Lon")
+    lloc.df <- lloc.df %>%
+      mutate("Província"=NA,
+             "Ciutat"=NA,
+             "Nom_toponímic"=NA
+             )
+  }
 
   }
 
@@ -331,12 +390,71 @@ if (FALSE) {
 
 ## Get historical wheather data (rainfall, temp)
 
-```{r}
+```{r Get historical wheather data (rainfall, temp) through WU}
+# WU - Weather Underground
+# ----------------------------------
+# https://www.wunderground.com/history/
+# They offer historical weather data for many weather stations, also in SPain. Not all of them but just a few have rainfall data, apparently (in most cases of stations monthly rainall data shows zero mm of rainfall when it did rain indeed. Sabadaell, Moia, Tona, Cerdanyola, etc. A weather station that seems to carry rainfal data effectively is "Barcelona Airport El Prat", shown also when selecting Sant Cugat, for insstance, as wheater station )
+#
 # rwunderground: R Interface to Weather Underground API
 # 
 # Tools for getting historical weather information and forecasts from wunderground.com. Historical weather and forecast data includes, but is not limited to, temperature, humidity, windchill, wind speed, dew point, heat index. Additionally, the weather underground weather API also includes information on sunrise/sunset, tidal conditions, satellite/webcam imagery, weather alerts, hurricane alerts and historical high/low temperatures.
-# 
 # https://cran.r-project.org/web/packages/rwunderground/index.html
+#library(pacman)
+#p_load("rwunderground")
+
+#Interesting functions: geolookup
+# geolookup(set_location(territory = "ES", city = "Moia"))
+#>Please enter your weather underground API key and press enter:
+#>Error: Invalid key!
+#
+# They require an API key, and distontinued the API Key free service in 2018
+# https://apicommunity.wunderground.com/weatherapi/topics/end-of-service-for-the-weather-underground-api
+# ---
+#
+# Therefore, web scraping will be the workaround to get some of their valuable data
+wu.url <- "https://www.wunderground.com/history/monthly/es/sant-cugat-del-vall%C3%A8s/LEBL/date/2018-12?cm_ven=localwx_history"
+
+```
+## Get historical wheather data (rainfall, temp) - by WeeWX powered Catalan weather stations
+
+```{r Get historical wheather data (rainfall, temp) - by WeeWX powered Catalan weather stations}
+# WeeWX - Open source software for your weather station. 
+# http://www.weewx.com/stations.html
+# ----------------------------------
+# WeeWX is a free, open source, software program, written in Python, which interacts with your weather station to produce graphs, reports, and HTML pages. It can optionally publish to weather sites or web servers. Thousands of stations throughout the world run weeWX, many of whom have opted-in to be shown on our station map. 
+#
+# Estacions interessants amb dades de pluja
+#
+# TERRASSA, estación W8681 de EA3KZ. Estación Meteorológica en Terrassa. Latitud: 41° 34.62' N Longitud: 002° 00.98' E Altura: 300 metros [JN11AN]. La estación meteorológica en uso es una W-8681 conectada a un pequeño ordenador Raspberry pi con el software weewx twitter @ea3kz_wx
+# Estació Meteorològica sense fils W8681 PROII. Preu: 220.22 € [transport gratuït, només Espanya península] - https://www.astroradio.com/ca/514040
+# https://meteo.ea3kz.com/history.html
+# https://meteo.ea3kz.com/NOAA/NOAA-2018-08.txt
+# https://meteo.ea3kz.com/NOAA/NOAA-2018-09.txt
+# https://meteo.ea3kz.com/NOAA/NOAA-2018-10.txt
+# https://meteo.ea3kz.com/NOAA/NOAA-2018-11.txt
+# https://meteo.ea3kz.com/NOAA/NOAA-2018-12.txt
+
+# El Serrat del Serí, Gurb, Catalunya
+# ELEV: 525 metres    LAT: 41-58.44 N    LONG: 002-14.28 E
+# http://elserrat.cat/weather/history.html
+# http://elserrat.cat/weather/NOAA/NOAA-2018-08.txt
+# http://elserrat.cat/weather/NOAA/NOAA-2018-09.txt
+# http://elserrat.cat/weather/NOAA/NOAA-2018-10.txt
+# http://elserrat.cat/weather/NOAA/NOAA-2018-11.txt
+# http://elserrat.cat/weather/NOAA/NOAA-2018-12.txt
+
+
+
+
+```
+
+```{r Get historical wheather data (rainfall, temp) - potential alternative ways}
+# AWEKAS (AUstria)
+# https://www.awekas.at/
+# AWEKAS is an abbrevation for “Automatic WEather map (german: KArten) System”. It is a system that processes indicated values of private weather stations graphically, generates weather maps and evaluates the data.
+# Estació de tona, en gràfics, no taula de dades. :-(
+# https://www.awekas.at/en/instrument.php?id=10147#day
 
 # Open Weather Map
 # https://openweathermap.org/price
@@ -353,6 +471,12 @@ if (FALSE) {
 # https://agromonitoring.com/api/accumulated-precipitation
 # However historical rainfall is for paid subscription palnms only
 # https://agromonitoring.com/price
+
+# Worldbank
+# ---------------------------------
+# http://sdwebx.worldbank.org/climateportal/index.cfm?page=downscaled_data_download&menu=historical
+# They allow downloading some excel file from any country with temp or rainfal from several periods, last one available by the time of this writing is 1991-2015 (better than nothing for my use case :-) 
+
 ```
 
 
@@ -369,7 +493,7 @@ openxlsx::write.xlsx(md, file = file.path(path.data, paste0(results.fname.noext,
 ```{r save DT html}
 # ------
   # Add the data table next to the map
-dt.data <- datatable(md[5:10],  filter = 'top', extensions="Scroller", 
+dt.data <- datatable(md,  filter = 'top', extensions="Scroller", 
                      style="bootstrap", class="compact",
                      width="100%", rownames = FALSE, 
                      options=list(deferRender=TRUE, 
