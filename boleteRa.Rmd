@@ -565,6 +565,7 @@ print.saveas <- function(x, ...){
 #               label = ~as.character(nom_comestible), 
 #               popup = ~as.character(foto)
 #               ) %>%
+    addMiniMap(zoomLevelOffset = -5) %>%
     addCircleMarkers(
       ~Longitude, ~Latitude, 
        label = ~as.character(nom_comestible), 
@@ -576,7 +577,7 @@ print.saveas <- function(x, ...){
                        "<br>Data: ", Year, "-", Month,
                        "<br>Alçada: ", alcada_srtm3, "-", alcada_gtopo30,
                        "<br>Lloc: ", Província, "-", Ciutat, "-", Nom_toponímic,
-                       "<img src=", file.path(ruta.foto, foto1), " width=300>",
+                       "<a href=", file.path(ruta.foto, foto1),"><img src=", file.path(ruta.foto, foto1), " width=200 ></a>",
                        foto,
                        "<br>Descripció del Lloc: ", Descripcio_Lloc
                        ),
