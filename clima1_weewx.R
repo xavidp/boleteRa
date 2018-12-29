@@ -24,57 +24,26 @@ p_load("fs")
 dies_mes <- c(31,28,31,30,31,30,31,31,30,31,30,31)
 rm(my.meteo)
 my.meteo <- data.frame(
-  c("Terrassa",           1, 2015, "https://meteo.ea3kz.com/NOAA/"),
-  c("Gurb",               1, 2014, "http://elserrat.cat/weather/NOAA/"),
-  c("BCN-SantGenis",      2, 2013, "ICATALUA116"),
+  c("BCN-SantGenis",      2, 2014, "ICATALUA116"),
+  c("Berga-IBACELON1",    2, 2010, "IBACELON1"),
+  c("Figueres",           2, 2018, "IFIGUERE4"),
+  c("Gurb",               1, 2012, "http://elserrat.cat/weather/NOAA/"),
+  c("Moia-IBARCELO58",    2, 2010, "IBARCELO58"),
+  c("Moia-IMOI3",         2, 2014, "IMOI3"),
+  c("MontBlanc-NE",       2, 2012, "IMONTBLA9"),
+  c("MontSant-SW",        2, 2015, "ICATALUN125"),
+  c("Montseny-Arbucies",  2, 2010, "ICATALUN15"),
+  c("Montseny-ElBrull",   2, 2018, "IELBRULL2"),
+  c("Montseny-StaMariaP", 2, 2018, "ISANTAMA1754"),
   c("SantBoi",            1, 2014, "http://jordicorbella.com/meteocam/weewx/NOAA/"),
   c("SantFeliuDeCodines", 2, 2014, "ICATALON10"),
-  c("Moia-IMOI3",         2, 2014, "IMOI3"),
-  c("Moia-IBARCELO58",    2, 2012, "IBARCELO58"),
-  c("Solsona",            2, 2012, "ISOLSONA3"),
-  c("Berga-IBACELON1",    2, 2012, "IBACELON1"),
-  c("TCN-PtaLaMora",      2, 2012, "ITLAMORA4"),
-  c("Montseny-ElBrull",   2, 2012, "IELBRULL2"),
-  c("Montseny-Arbucies",  2, 2012, "ICATALUN15"),
-  c("Montseny-StaMariaP", 2, 2012, "ISANTAMA1754"),
-  c("Figueres",           2, 2012, "IFIGUERE4"),
-  c("MontSant-SW",        2, 2012, "ICATALUN125"),
-  c("MontBlanc-NE",       2, 2012, "IMONTBLA9")
+  c("Solsona",            2, 2017, "ISOLSONA3"),
+  c("TCN-PtaLaMora",      2, 2018, "ITLAMORA4"),
+  c("Terrassa",           1, 2015, "https://meteo.ea3kz.com/NOAA/")
   )
 my.meteo <- data.frame(t(my.meteo))
 rownames(my.meteo) <- c(1:nrow(my.meteo))
 colnames(my.meteo) <- c("name", "type", "any.ini", "url.base")
-
-# my.meteo.name <- c("Terrassa", 
-#                    "Gurb", 
-#                    "BCN-SantGenis", 
-#                    "SantBoi",
-#                    "SantFeliuDeCodines",
-#                    "Moia-IMOI3", 
-#                    "Moia-IBARCELO58",
-#                    "Solsona",
-#                    "Berga-IBACELON1",
-#                    "TCN-PtaLaMora",
-#                    "MontSant",
-#                    "Montseny-ElBrull",
-#                    "Montseny-Arbucies",
-#                    "Montseny-StCeloni-StaMa")
-# my.meteo.type <- c(1, 1, 2, 1, 2, 2, 2, 2, 2, 2, 2, 2) # 1=WeeWX, 2=WU # Each source of data has each own url to fetch data
-# # Variables in my.meteo.type 2 
-# # Date,TemperatureHighC,TemperatureAvgC,TemperatureLowC,DewpointHighC,DewpointAvgC,DewpointLowC,HumidityHigh,HumidityAvg,HumidityLow,PressureMaxhPa,PressureMinhPa,WindSpeedMaxKMH,WindSpeedAvgKMH,GustSpeedMaxKMH,PrecipitationSumCM
-# any.ini <- c(2015,
-#              2014,
-#              2013,
-#              2014,
-#              2014,
-#              2014,
-#              2012,
-#              2012,
-#              2012,
-#              2012,
-#              2012,
-#              2012)
-
 my.data <- list()
 ii <- 0
 for (n.meteo in 1:length(my.meteo.name)) {
