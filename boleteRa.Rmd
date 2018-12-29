@@ -168,7 +168,9 @@ md$Pendent <- gsub("[^0-9]", "", md$Pendent)
 md$Pendent <- as.numeric(md$Pendent)
 md$`nom vulgar (comestible)` <- as.factor(md$`nom vulgar (comestible)`)
 md$`nom vulgar (no comestible)` <- as.factor(md$`nom vulgar (no comestible)`)
-
+nom.comestible.coln <- grep("nom vulgar (comestible)", colnames(md), fixed=T)
+colnames(md)[nom.comestible.coln] <- "nom_comestible"
+colnames(md)[nom.comestible.coln+1] <- "nom_nocomestible"
 rbind(head(md),
       tail(md))
 ```
@@ -232,6 +234,9 @@ if (nrow(md.new) > 0 ) {
   #No geonamesUsername set. See http://geonames.wordpress.com/2010/03/16/ddos-part-ii/ and set one with options(geonamesUsername="foo") for some services to work
   options(geonamesUsername="xavidp") 
   #GNsrtm3(54.481084,-3.220625)
+  if (options()$geonamesHost == "ws.geonames.org") {
+    options(geonamesHost="api.geonames.org")
+  }
   
   # Define empty lists to store temporary information retrieved by geonames servers 
   alcada_srtm3 <- list()
@@ -246,7 +251,9 @@ if (nrow(md.new) > 0 ) {
     if (!is.na(md.new$Latitude[i])) {
       # Get altitude info from elevation models
       alcada_srtm3[[i]] <- c(md.new$cid[i], GNsrtm3(md.new$Latitude[i], md.new$Longitude[i]))
+      # Alternatively, see url like: http://api.geonames.org/srtm3?lat=50.01&lng=10.2&username=xavidp&style=full
       alcada_gtopo30[[i]] <- c(md.new$cid[i], GNgtopo30(md.new$Latitude[i], md.new$Longitude[i]))
+      # Alternatively, see url like: http://api.geonames.org/gtopo30?lat=50.01&lng=10.2&username=xavidp&style=full
       # Get Location info
       data.xml[[i]] <- xmlParse(paste0("http://api.geonames.org/extendedFindNearby?lat=", # long (extendedFindNearby)
                                  md.new$Latitude[i], "&lng=", # long (extendedFindNearby)
@@ -475,7 +482,7 @@ htmltools::save_html(dt.data,
 
 pt.md <- rpivotTable(
   data = md, 
-  rows = c("nom vulgar (comestible)"), 
+  rows = c("nom_comestible"), 
   cols=c("Year", "Month"), 
   aggregatorName = "Count", 
 #  aggregatorName = "Sum", 
@@ -494,6 +501,45 @@ saveWidget(pt.md, file=file.path(getwd(), path.html, "boleteRa.pivotTable.html")
 
 ```
 
+
+## LeafLet Map (Standalone)
+
+Dereived from:
+* https://rstudio.github.io/leaflet/
+* http://archived.mhermans.net/hiking-gpx-r-leaflet.html
+
+
+```{r LeafLet map, echo=FALSE}
+
+# Initialize basemap for r package leaflet
+tilesURL <- "http://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}"
+p_load(leaflet)
+# See leaflet marker options here: 
+# https://rstudio.github.io/leaflet/markers.html 
+
+# Create the Leaflet map with my data md (ll.md)
+  ll.md <- leaflet::leaflet(md) %>%
+    addTiles() %>%
+#    addMarkers(~Longitude, ~Latitude, 
+#               label = ~as.character(nom_comestible), 
+#               popup = ~as.character(foto)
+#               ) %>%
+    addCircleMarkers(
+      ~Longitude, ~Latitude, 
+       label = ~as.character(nom_comestible), 
+       popup = ~as.character(foto),
+      radius = ~ifelse(!is.na(nom_comestible), 6, 10),
+      color = ~palette(rainbow(96)),
+      stroke = FALSE, fillOpacity = 0.5,
+      clusterOptions = markerClusterOptions()
+  )
+  ll.md
+#    addTiles(tilesURL, 	attribution='Map tiles by <a href="http://server.arcgisonline.com">ArcGIS online</a> &mdash; Map data &copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>') %>% 
+  
+
+  
+```
+
 ## MapView
 
 See: https://r-spatial.github.io/mapview/
@@ -506,7 +552,50 @@ See: https://r-spatial.github.io/mapview/
   # 
   # Code will come here
 
+# Initialize basemap for r package leaflet
+tilesURL <- "http://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}"
 
+# See leaflet marker options here: 
+# https://rstudio.github.io/leaflet/markers.html 
+
+# Create the Leaflet map with my data md (ll.md)
+  ll.md <- leaflet::leaflet(md) %>% 
+      # Base groups
+    addProviderTiles(providers$OpenStreetMap, group = "OSM") %>%
+#    addTiles(tilesURL, 	attribution='Map tiles by <a href="http://server.arcgisonline.com">ArcGIS online</a> &mdash; Map data &copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>') %>% 
+  
+    # Overlay groups
+    addMarkers(label = ~as.character(md$`nom vulgar (comestible)`),
+               popup = paste(
+                 "Name1:", md$`nom vulgar (comestible)`, "<br>",
+                 "Name2:", md$`nom vulgar (no comestible)`, "<br>",
+                 "Abundance:", md$Abundància, "<br>",
+                 "Mushroom Details:", md$`Detalls del bolet`, "<br>",
+                 "Forest density:", md$`Densitat del sotabosc`, "<br>",
+                 "Site desc:", md$`Descripció del lloc`, "<br>",
+                 "Slope:", md$Pendent, "<br>",
+                 "Picture:", md$foto, "<br>",
+                 "Date:", md$Date
+                 ),
+               clusterOptions = markerClusterOptions(),
+               group = "Edible") %>%
+
+    # addMarkers(label = ~as.character(d$`nom vulgar (no comestible)`),
+    #            popup = ~as.character(d$Abundància),
+    #            clusterOptions = markerClusterOptions(),
+    #            group = "Non Edible") %>%
+  
+    # Layers control
+  addLayersControl(
+    baseGroups = c("OSM"),
+#    overlayGroups = c("Edible", "Non Edible"),
+    overlayGroups = c("Edible"),
+    options = layersControlOptions(collapsed = FALSE)
+  ) %>%
+  
+    # Legend
+    addLegend("bottomright", colors= "blue", labels="MyFindings", title="Catalonia")
+  
 ```
 
 
