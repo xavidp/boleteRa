@@ -577,7 +577,7 @@ print.saveas <- function(x, ...){
                        "<br>Data: ", Year, "-", Month,
                        "<br>Alçada: ", alcada_srtm3, "-", alcada_gtopo30,
                        "<br>Lloc: ", Província, "-", Ciutat, "-", Nom_toponímic,
-                       "<a href=", file.path(ruta.foto, foto1),"><img src=", file.path(ruta.foto, foto1), " width=200 ></a>",
+                       "<a href=", file.path(foto1),"><img src=", file.path(foto1), " width=200 ></a>",
                        foto,
                        "<br>Descripció del Lloc: ", Descripcio_Lloc
                        ),
