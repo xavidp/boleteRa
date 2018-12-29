@@ -11,6 +11,7 @@ knitr::opts_chunk$set(echo = FALSE)
 
 ```{r install and load required packages if needed, echo=FALSE}
 if (!require("devtools")) install.packages("devtools"); library(devtools)
+if (!require("pacman")) install.packages("pacman"); library(pacman)
 
 # Packages for Data manipulation
 if (!require("readODS")) install.packages("readODS"); library(readODS)
@@ -20,6 +21,7 @@ if (!require("XML")) install.packages("XML"); library(XML)
 if (!require("openxlsx")) install.packages("openxlsx"); library(openxlsx)
 if (!require("dplyr")) install.packages("dplyr"); library(dplyr)
 if (!require("tidyr")) install.packages("tidyr"); library(tidyr)
+if (!require("purrr")) install.packages("purrr"); library(purrr)
 
 # Packages for Html5 Output manipulation
 # Add package widget frame so that we attempt to get responsive iframes produced by htmlwidgets
@@ -171,6 +173,18 @@ md$`nom vulgar (no comestible)` <- as.factor(md$`nom vulgar (no comestible)`)
 nom.comestible.coln <- grep("nom vulgar (comestible)", colnames(md), fixed=T)
 colnames(md)[nom.comestible.coln] <- "nom_comestible"
 colnames(md)[nom.comestible.coln+1] <- "nom_nocomestible"
+densitat_sotabost.coln <- grep("Densitat", colnames(md), fixed=T)
+colnames(md)[densitat_sotabost.coln] <- "Densitat_sotabosc"
+detalls_bolet.coln <- grep("Detalls del bolet", colnames(md), fixed=T)
+colnames(md)[detalls_bolet.coln] <- "Detalls_bolet"
+
+# For cases of citations with more than 1 picture, get only the first one for easier display in maps
+myfoto1 <- unlist(map(str_split(md$foto, ";"), 1))
+#length(unlist(foto1))
+#nrow(md)
+md <- md %>%
+  mutate(foto1 = myfoto1)
+
 rbind(head(md),
       tail(md))
 ```
@@ -512,14 +526,41 @@ Dereived from:
 ```{r LeafLet map, echo=FALSE}
 
 # Initialize basemap for r package leaflet
-tilesURL <- "http://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}"
+#tilesURL <- "http://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}"
+#tilesURL <- "https://tile.thunderforest.com/landscape/{z}/{x}/{y}.png?apikey=yourapikey"
 p_load(leaflet)
 # See leaflet marker options here: 
 # https://rstudio.github.io/leaflet/markers.html 
 
+#ruta.foto <- file.path(getwd(), "fotos")
+ruta.foto <- "/home/xavi/Sync/BQa5_Zamiadroid/Photos/"
+saveas <- function(map, file){
+  class(map) <- c("saveas",class(map))
+  attr(map,"filesave")=file
+  map
+}
+
+print.saveas <- function(x, ...){
+  class(x) = class(x)[class(x)!="saveas"]
+  htmltools::save_html(x, file=attr(x,"filesave"))
+}
 # Create the Leaflet map with my data md (ll.md)
-  ll.md <- leaflet::leaflet(md) %>%
-    addTiles() %>%
+  ll.md <- leaflet::leaflet(md, width = "100%", height = "800") %>%
+    #addTiles() %>%
+    # Add tiles
+    addProviderTiles("OpenStreetMap.Mapnik", group = "Road map") %>%
+    addProviderTiles("Esri.NatGeoWorldMap", group = "National Geographic") %>%
+    addProviderTiles("Esri.WorldImagery", group = "Satellite") %>%
+
+      # Layers control
+    addLayersControl(position = 'bottomright',
+                     #overlayGroups = c("Hiking routes", "Photo markers"),
+                     options = layersControlOptions(collapsed = FALSE),
+                     baseGroups = c("Road map",
+                                    "National Geographic", 
+                                    "Satellite")
+                     ) %>%
+    
 #    addMarkers(~Longitude, ~Latitude, 
 #               label = ~as.character(nom_comestible), 
 #               popup = ~as.character(foto)
@@ -527,13 +568,27 @@ p_load(leaflet)
     addCircleMarkers(
       ~Longitude, ~Latitude, 
        label = ~as.character(nom_comestible), 
-       popup = ~as.character(foto),
+       popup = ~paste0(nom_comestible, " | ", nom_nocomestible,
+                       "<br>Detalls del bolet: ", Detalls_bolet,
+                       "<br>Abundància: ", Abundància,
+                       "<br>Densitat del sotabosc: ", Densitat_sotabosc,
+                       "<br>Pendent: ", Pendent,
+                       "<br>Data: ", Year, "-", Month,
+                       "<br>Alçada: ", alcada_srtm3, "-", alcada_gtopo30,
+                       "<br>Lloc: ", Província, "-", Ciutat, "-", Nom_toponímic,
+                       "<img src=", file.path(ruta.foto, foto1), " width=300>",
+                       foto,
+                       "<br>Descripció del Lloc: ", Descripcio_Lloc
+                       ),
       radius = ~ifelse(!is.na(nom_comestible), 6, 10),
       color = ~palette(rainbow(96)),
-      stroke = FALSE, fillOpacity = 0.5,
-      clusterOptions = markerClusterOptions()
+#      clusterOptions = markerClusterOptions(),
+      stroke = FALSE, fillOpacity = 0.5
   )
+  
+
   ll.md
+  saveas(ll.md, file.path(ruta.foto, "index.html"))
 #    addTiles(tilesURL, 	attribution='Map tiles by <a href="http://server.arcgisonline.com">ArcGIS online</a> &mdash; Map data &copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>') %>% 
   
 
@@ -551,51 +606,27 @@ See: https://r-spatial.github.io/mapview/
   # =======================================================
   # 
   # Code will come here
+#mapview(breweries)
+p_load(sf)
+p_load(mapview)
+md.nona <- md %>%
+  filter(!is.na(Longitude))
+md.sf <- st_as_sf(x = md.nona, 
+                        coords = c("Longitude", "Latitude"),
+                        crs = "+proj=longlat +datum=WGS84")
+# simple plot
+plot(md.sf)
+# interactive map:
+mapview(md.sf)
+fotos <- file.path(ruta.foto, md.nona$foto)
 
-# Initialize basemap for r package leaflet
-tilesURL <- "http://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}"
+mapview(md.sf, 
+        popup = popupImage(fotos, src = "remote"))
 
-# See leaflet marker options here: 
-# https://rstudio.github.io/leaflet/markers.html 
+# Convert to Spatial object (if needed)
+md.sp <- as(my.sf, "Spatial")
+mapview(md.sp)
 
-# Create the Leaflet map with my data md (ll.md)
-  ll.md <- leaflet::leaflet(md) %>% 
-      # Base groups
-    addProviderTiles(providers$OpenStreetMap, group = "OSM") %>%
-#    addTiles(tilesURL, 	attribution='Map tiles by <a href="http://server.arcgisonline.com">ArcGIS online</a> &mdash; Map data &copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>') %>% 
-  
-    # Overlay groups
-    addMarkers(label = ~as.character(md$`nom vulgar (comestible)`),
-               popup = paste(
-                 "Name1:", md$`nom vulgar (comestible)`, "<br>",
-                 "Name2:", md$`nom vulgar (no comestible)`, "<br>",
-                 "Abundance:", md$Abundància, "<br>",
-                 "Mushroom Details:", md$`Detalls del bolet`, "<br>",
-                 "Forest density:", md$`Densitat del sotabosc`, "<br>",
-                 "Site desc:", md$`Descripció del lloc`, "<br>",
-                 "Slope:", md$Pendent, "<br>",
-                 "Picture:", md$foto, "<br>",
-                 "Date:", md$Date
-                 ),
-               clusterOptions = markerClusterOptions(),
-               group = "Edible") %>%
-
-    # addMarkers(label = ~as.character(d$`nom vulgar (no comestible)`),
-    #            popup = ~as.character(d$Abundància),
-    #            clusterOptions = markerClusterOptions(),
-    #            group = "Non Edible") %>%
-  
-    # Layers control
-  addLayersControl(
-    baseGroups = c("OSM"),
-#    overlayGroups = c("Edible", "Non Edible"),
-    overlayGroups = c("Edible"),
-    options = layersControlOptions(collapsed = FALSE)
-  ) %>%
-  
-    # Legend
-    addLegend("bottomright", colors= "blue", labels="MyFindings", title="Catalonia")
-  
 ```
 
 
