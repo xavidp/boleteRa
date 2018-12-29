@@ -593,8 +593,14 @@ print.saveas <- function(x, ...){
 #    addTiles(tilesURL, 	attribution='Map tiles by <a href="http://server.arcgisonline.com">ArcGIS online</a> &mdash; Map data &copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>') %>% 
   
 
-  
+webshot(file.path(ruta.foto, "index.html"),
+        file=file.path(getwd(), path.html, "map.all.png"),
+        delay=0.5)
+
+
 ```
+
+![My Map - overview](./html/map.all.png)
 
 ## MapView
 
@@ -619,14 +625,18 @@ md.sf <- st_as_sf(x = md.nona,
 plot(md.sf)
 # interactive map:
 mapview(md.sf)
-fotos <- file.path(ruta.foto, md.nona$foto)
+fotos <- file.path(ruta.foto, md.nona$foto1)
 
-mapview(md.sf, 
-        popup = popupImage(fotos, src = "remote"))
+mv <- mapview(md.sf[1:100,], 
+        popup = popupImage(fotos[1:100], src = "local"))
 
 # Convert to Spatial object (if needed)
 md.sp <- as(my.sf, "Spatial")
 mapview(md.sp)
+
+#mapshot(mv, url = file.path(ruta.foto, "index.sf.html"),
+ #       file = file.path(ruta.foto, "index.sf.png"))
+
 
 ```
 
