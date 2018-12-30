@@ -418,34 +418,40 @@ if (FALSE) {
 #Code Will Come here
 # See side R scripts clima1_weewx.R
 
-# Get historical wheather data (rainfall, temp) - potential alternative ways}
-# ============================================================================
-# AWEKAS (AUstria)
-# https://www.awekas.at/
-# AWEKAS is an abbrevation for “Automatic WEather map (german: KArten) System”. It is a system that processes indicated values of private weather stations graphically, generates weather maps and evaluates the data.
-# Estació de tona, en gràfics, no taula de dades. :-(
-# https://www.awekas.at/en/instrument.php?id=10147#day
+# Find the nearest weather station to each citation point
+# Dereived from: https://stackoverflow.com/a/27444208
+pacman::p_load(rgeos, sp, tidyverse)
+md.n <- nrow(md)
+md.s <- structure(list(lon = md$Longitude, lat = md$Latitude), .Names = c("lon", 
+       "lat"), row.names = c(NA, md.n), class = "data.frame")
+nrow(md.s)
+md.s <- md.s %>%
+  filter(!is.na(lat))
+nrow(md.s)
+md.sp <- SpatialPoints(md.s)
 
-# Open Weather Map
-# https://openweathermap.org/price
-# ----------------------------------
-# 10 USD for 6 year of historical wheater data for a given city
-# https://openweathermap.org/history
-# https://openweathermap.org/history-bulk
+# Convert Meteorological stations to spatial points
+my.meteo.n <- nrow(my.meteo)
+my.meteo.s <- structure(list(lon = as.double(as.character(my.meteo$lon)), 
+                             lat = as.double(as.character(my.meteo$lat))
+                             ), .Names = c("lon", "lat"), 
+                        row.names = c(NA, my.meteo.n), 
+                        class = "data.frame")
+nrow(my.meteo.s)
+my.meteo.sp <- SpatialPoints(my.meteo.s)
+
+md.nona <- md %>%
+  filter(!is.na(Latitude))
+
+# Find the nearest neighbour (nn) meteo station id to each citation point  
+md.nona$nn.meteo.id<- apply(gDistance(my.meteo.sp, md.sp, byid=TRUE), 1, which.min)
+
+md.nona <- left_join(md.nona, my.meteo, by=c("nn.meteo.id" = "id")) %>%
+  select(c(colnames(md.nona), nn.meteo = name)) 
+
+rbind(head(md.nona), tail(md.nona))[,c(2,20,23,3,4)]
 
 
-# Agromonitoring 
-# ----------------------------------
-# See 
-# https://agromonitoring.com/api/history-weather
-# https://agromonitoring.com/api/accumulated-precipitation
-# However historical rainfall is for paid subscription palnms only
-# https://agromonitoring.com/price
-
-# Worldbank
-# ---------------------------------
-# http://sdwebx.worldbank.org/climateportal/index.cfm?page=downscaled_data_download&menu=historical
-# They allow downloading some excel file from any country with temp or rainfal from several periods, last one available by the time of this writing is 1991-2015 (better than nothing for my use case :-) 
 
 ```
 

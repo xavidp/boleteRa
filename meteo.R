@@ -24,26 +24,28 @@ p_load("fs")
 dies_mes <- c(31,28,31,30,31,30,31,31,30,31,30,31)
 rm(my.meteo)
 my.meteo <- data.frame(
-  c("BCN-SantGenis",      2, 2014, "ICATALUA116"),
-  c("Berga-IBACELON1",    2, 2010, "IBACELON1"),
-  c("Figueres",           2, 2018, "IFIGUERE4"),
-  c("Gurb",               1, 2012, "http://elserrat.cat/weather/NOAA/"),
-  c("Moia-IBARCELO58",    2, 2010, "IBARCELO58"),
-  c("Moia-IMOI3",         2, 2014, "IMOI3"),
-  c("MontBlanc-NE",       2, 2012, "IMONTBLA9"),
-  c("MontSant-SW",        2, 2015, "ICATALUN125"),
-  c("Montseny-Arbucies",  2, 2010, "ICATALUN15"),
-  c("Montseny-ElBrull",   2, 2018, "IELBRULL2"),
-  c("Montseny-StaMariaP", 2, 2018, "ISANTAMA1754"),
-  c("SantBoi",            1, 2014, "http://jordicorbella.com/meteocam/weewx/NOAA/"),
-  c("SantFeliuDeCodines", 2, 2014, "ICATALON10"),
-  c("Solsona",            2, 2017, "ISOLSONA3"),
-  c("TCN-PtaLaMora",      2, 2018, "ITLAMORA4"),
-  c("Terrassa",           1, 2015, "https://meteo.ea3kz.com/NOAA/")
+  c("BCN-SantGenis",      2, 2014, "ICATALUA116", "41.42694444", "2.13638889"),
+  c("Berga-IBACELON1",    2, 2010, "IBACELON1", "42.09916667", "1.84583333"),
+  c("Figueres",           2, 2018, "IFIGUERE4", "42.25972222", "2.96444444"),
+  c("Gurb",               1, 2012, "http://elserrat.cat/weather/NOAA/", "41.97888889", "2.24111111"),
+  c("Moia-IBARCELO58",    2, 2010, "IBARCELO58", "41.81361111", "2.10083333"),
+  c("Moia-IMOI3",         2, 2014, "IMOI3", "41.81277778", "2.09083333"),
+  c("MontBlanc-NE",       2, 2012, "IMONTBLA9", "41.37222222", "1.16083333"),
+  c("MontSant-SW",        2, 2015, "ICATALUN125", "41.21694444", "0.72861111"),
+  c("Montseny-Arbucies",  2, 2010, "ICATALUN15", "41.82361111", "2.47027778"),
+  c("Montseny-ElBrull",   2, 2018, "IELBRULL2", "41.81916667", "2.27722222"),
+  c("Montseny-StaMariaP", 2, 2018, "ISANTAMA1754", "41.70000000", "2.45000000"),
+  c("SantBoi",            1, 2014, "http://jordicorbella.com/meteocam/weewx/NOAA/", "41.35611111", "2.04388889"),
+  c("SantFeliuDeCodines", 2, 2014, "ICATALON10", "41.68444444", "2.16305556"),
+  c("Solsona",            2, 2017, "ISOLSONA3", "41.98111111", "1.54361111"),
+  c("TCN-PtaLaMora",      2, 2018, "ITLAMORA4", "41.13861111", "1.34916667"),
+  c("Terrassa",           1, 2015, "https://meteo.ea3kz.com/NOAA/", "41.58388889", "2.02722222")
   )
 my.meteo <- data.frame(t(my.meteo))
 rownames(my.meteo) <- c(1:nrow(my.meteo))
-colnames(my.meteo) <- c("name", "type", "any.ini", "url.base")
+colnames(my.meteo) <- c("name", "type", "any.ini", "url.base", "lat", "lon")
+my.meteo <- my.meteo %>%
+  mutate(id=as.integer(rownames(my.meteo)))
 my.data <- list()
 ii <- 0
 for (n.meteo in 1:length(my.meteo.name)) {
@@ -128,3 +130,31 @@ for (n.meteo in 1:length(my.meteo.name)) {
 # http://elserrat.cat/weather/NOAA/NOAA-2018-12.txt
 
 
+# Get historical wheather data (rainfall, temp) - potential alternative ways}
+# ============================================================================
+# AWEKAS (AUstria)
+# https://www.awekas.at/
+# AWEKAS is an abbrevation for “Automatic WEather map (german: KArten) System”. It is a system that processes indicated values of private weather stations graphically, generates weather maps and evaluates the data.
+# Estació de tona, en gràfics, no taula de dades. :-(
+# https://www.awekas.at/en/instrument.php?id=10147#day
+
+# Open Weather Map
+# https://openweathermap.org/price
+# ----------------------------------
+# 10 USD for 6 year of historical wheater data for a given city
+# https://openweathermap.org/history
+# https://openweathermap.org/history-bulk
+
+
+# Agromonitoring 
+# ----------------------------------
+# See 
+# https://agromonitoring.com/api/history-weather
+# https://agromonitoring.com/api/accumulated-precipitation
+# However historical rainfall is for paid subscription palnms only
+# https://agromonitoring.com/price
+
+# Worldbank
+# ---------------------------------
+# http://sdwebx.worldbank.org/climateportal/index.cfm?page=downscaled_data_download&menu=historical
+# They allow downloading some excel file from any country with temp or rainfal from several periods, last one available by the time of this writing is 1991-2015 (better than nothing for my use case :-) 
