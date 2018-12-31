@@ -10,7 +10,24 @@ But then you might want to keep it elsewhere available online through a web brow
 
 All these data management ad enrichment is done in this project through R.
 
-See some example graphs produced out of it:
+See some example graphs produced out of it.
+
+Basic leaflet map with different base maps and different circle color and size depending on different criteria:
+
+Road map | National Geographic | Satellite
+--- | --- | ---
+<img src=http://seeds4c.org/display576 width=300> | <img src=http://seeds4c.org/display575 width=300> | <img src=http://seeds4c.org/display577 width=300>
+
+Example citation view using as a base map:
+
+National Geographic | Satellite
+--- | ---
+<img src=http://seeds4c.org/display573 width=600> | <img src=http://seeds4c.org/display574 width=600> 
+
+Some pivottable to query the dataset in realtime and make heatmap-like aggregation tables through the internet browser itself:
+
+
+First attempt to use Crosstalkk package to display map and table in Sync (failed, so far ;-) 
 <img src=http://seeds4c.org/display522>
 
 If you want, comment, clone or fork and Enjoy! :-)
