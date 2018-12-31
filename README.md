@@ -25,10 +25,12 @@ National Geographic | Satellite
 <img src=http://seeds4c.org/display573 width=600> | <img src=http://seeds4c.org/display574 width=600> 
 
 Some pivottable to query the dataset in realtime and make heatmap-like aggregation tables through the internet browser itself:
+
 <img src=http://seeds4c.org/display578>
 
 
 First attempt to use [Crosstalk](https://rstudio.github.io/crosstalk/) package (instead of Shiny) to display map and table in Sync (failed, so far ;-) 
+
 <img src=http://seeds4c.org/display522>
 
 If you want, comment, clone or fork and Enjoy! :-)
