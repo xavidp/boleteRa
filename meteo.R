@@ -48,7 +48,7 @@ my.meteo <- my.meteo %>%
   mutate(id=as.integer(rownames(my.meteo)))
 my.data <- list()
 ii <- 0
-for (n.meteo in 1:length(my.meteo.name)) {
+for (n.meteo in 1:length(my.meteo$name)) {
   # Fixa el rang d'any en que hi ha dades per a cada estació (n.meteo)
   anys <- c(as.integer(as.character(my.meteo$any.ini[n.meteo])):2018)
   
