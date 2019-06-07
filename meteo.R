@@ -1,5 +1,16 @@
 #Get historical wheather data (rainfall, temp) through WU
+if (!require("devtools")) install.packages("devtools"); library(devtools)
+if (!require("pacman")) install.packages("pacman"); library(pacman)
 
+# Meteoland - Landscape Meteorology Tools
+# Functions to estimate weather variables at any position of a landscape [De Caceres et al. (2018) <doi:10.1016/j.envsoft.2018.08.003>].
+# https://cran.r-project.org/package=meteoland
+# https://cran.r-project.org/web/packages/meteoland/vignettes/UserGuide.html  
+# ----------------------------------
+#
+p_load(meteoland)
+#
+# ============================================================================
 # WeeWX - Open source software for your weather station. 
 # http://www.weewx.com/stations.html
 # ----------------------------------
@@ -15,8 +26,6 @@
 # https://meteo.ea3kz.com/NOAA/NOAA-2018-10.txt
 # https://meteo.ea3kz.com/NOAA/NOAA-2018-11.txt
 # https://meteo.ea3kz.com/NOAA/NOAA-2018-12.txt
-if (!require("devtools")) install.packages("devtools"); library(devtools)
-if (!require("pacman")) install.packages("pacman"); library(pacman)
 p_load("tidyverse")
 p_load("fs")
 #p_load("readr", "dplyr", "tidyr")
