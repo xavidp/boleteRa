@@ -7,9 +7,45 @@ if (!require("pacman")) install.packages("pacman"); library(pacman)
 # https://cran.r-project.org/package=meteoland
 # https://cran.r-project.org/web/packages/meteoland/vignettes/UserGuide.html  
 # ----------------------------------
-#
-p_load(meteoland)
-#
+# Load packages
+p_load(meteoland, dplyr, sf, lubridate)
+# get data from aemet
+sl.sp <- downloadAEMEThistoricalstationlist(Sys.getenv("r_aemet_token"))
+# display all stations with pacakge sp
+plot(sl.sp)
+
+# convert sp object to sf (Simple features)
+sl.sf <- st_as_sf(sl.sp)
+# now you can use tidyverse::dplyr commands on the sf object, such as filter, et all
+sl.sf.ct <- sl.sf %>% 
+  filter(province == "BARCELONA" | province == "GIRONA" | province == "LLEIDA" | province == "TARRAGONA")
+# and then you can plot the sf object against some of the variables
+plot(sl.sf.ct["elevation"])
+
+
+# Now we download some rainfall data from aemet stations from catalonia
+# ID list from those stations:
+sl.ids <- sl.sf.ct$ID
+
+# Get Historical Data 
+sl.hd <- downloadAEMEThistorical(Sys.getenv("r_aemet_token"), 
+                                 dates = seq(from=as.Date("2019-05-01"), to=as.Date("2019-06-01"), by=1),
+                                 station_id = sl.ids[1])
+class(sl.hd)
+#sl.hd.sf <- st_as_sf(sl.hd)
+
+downloadAEMEThistorical(Sys.getenv("r_aemet_token"), 
+                                 dates = seq(from=as.Date("2017-05-01"), to=as.Date("2019-06-01"), by=1),
+                                 station_id = sl.ids,
+                        export=T,
+                        exportDir=file.path("precipitacio", "aemet"),
+                        exportFormat="meteoland/txt"
+                        )
+
+sl.today <- downloadAEMETcurrentday(Sys.getenv("r_aemet_token"), daily = TRUE, verbose = TRUE)
+
+
+
 # ============================================================================
 # WeeWX - Open source software for your weather station. 
 # http://www.weewx.com/stations.html
