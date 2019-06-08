@@ -19,10 +19,12 @@ sl.sf <- st_as_sf(sl.sp)
 # now you can use tidyverse::dplyr commands on the sf object, such as filter, et all
 sl.sf.ct <- sl.sf %>% 
   filter(province == "BARCELONA" | province == "GIRONA" | province == "LLEIDA" | province == "TARRAGONA") %>% 
-  filter(ID != "9771C") %>% # removed because downloading data from some years fail and break period loop to download data
-  filter(ID != "9987P") %>% # removed because downloading data from some years fail and break period loop to download data
-  filter(ID != "0255B") # removed because downloading data from some years fail and break period loop to download data
-
+  # Some stations where removed because downloading data from some years fail and break period loop to download data
+  filter(ID != "9771C") %>% # Lleida
+  filter(ID != "9987P") %>% # St Jaume d'Enveja
+  filter(ID != "0255B") %>% # Santa Susanna
+  filter(ID != "0367")  # Girona aeroport
+  
 # and then you can plot the sf object against some of the variables
 plot(sl.sf.ct["elevation"])
 
@@ -40,7 +42,7 @@ sl.ids <- sl.sf.ct$ID
 
 sl.today <- downloadAEMETcurrentday(Sys.getenv("r_aemet_token"), daily = TRUE, verbose = TRUE)
 
-for (yy in 2019:2019) {
+for (yy in 2012:2016) {
   downloadAEMEThistorical(Sys.getenv("r_aemet_token"), 
                           dates = seq(from=as.Date(paste0(yy, "-01-01")), to=as.Date(paste0(yy, "-12-31")), by=1),
                           station_id = sl.ids,
