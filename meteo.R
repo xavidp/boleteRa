@@ -18,7 +18,11 @@ plot(sl.sp)
 sl.sf <- st_as_sf(sl.sp)
 # now you can use tidyverse::dplyr commands on the sf object, such as filter, et all
 sl.sf.ct <- sl.sf %>% 
-  filter(province == "BARCELONA" | province == "GIRONA" | province == "LLEIDA" | province == "TARRAGONA")
+  filter(province == "BARCELONA" | province == "GIRONA" | province == "LLEIDA" | province == "TARRAGONA") %>% 
+  filter(ID != "9771C") %>% # removed because downloading data from some years fail and break period loop to download data
+  filter(ID != "9987P") %>% # removed because downloading data from some years fail and break period loop to download data
+  filter(ID != "0255B") # removed because downloading data from some years fail and break period loop to download data
+
 # and then you can plot the sf object against some of the variables
 plot(sl.sf.ct["elevation"])
 
@@ -28,21 +32,24 @@ plot(sl.sf.ct["elevation"])
 sl.ids <- sl.sf.ct$ID
 
 # Get Historical Data 
-sl.hd <- downloadAEMEThistorical(Sys.getenv("r_aemet_token"), 
-                                 dates = seq(from=as.Date("2019-05-01"), to=as.Date("2019-06-01"), by=1),
-                                 station_id = sl.ids[1])
-class(sl.hd)
+#sl.hd <- downloadAEMEThistorical(Sys.getenv("r_aemet_token"), 
+#                                 dates = seq(from=as.Date("2019-05-01"), to=as.Date("2019-06-01"), by=1),
+#                                 station_id = sl.ids[1])
+#class(sl.hd)
 #sl.hd.sf <- st_as_sf(sl.hd)
 
-downloadAEMEThistorical(Sys.getenv("r_aemet_token"), 
-                                 dates = seq(from=as.Date("2017-05-01"), to=as.Date("2019-06-01"), by=1),
-                                 station_id = sl.ids,
-                        export=T,
-                        exportDir=file.path("precipitacio", "aemet"),
-                        exportFormat="meteoland/txt"
-                        )
-
 sl.today <- downloadAEMETcurrentday(Sys.getenv("r_aemet_token"), daily = TRUE, verbose = TRUE)
+
+for (yy in 2019:2019) {
+  downloadAEMEThistorical(Sys.getenv("r_aemet_token"), 
+                          dates = seq(from=as.Date(paste0(yy, "-01-01")), to=as.Date(paste0(yy, "-12-31")), by=1),
+                          station_id = sl.ids,
+                          export=T,
+                          exportDir=file.path("precipitacio", "aemet", yy),
+                          exportFormat="meteoland/txt"
+  )
+}
+
 
 
 
