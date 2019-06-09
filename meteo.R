@@ -17,8 +17,10 @@ plot(sl.sp)
 # convert sp object to sf (Simple features)
 sl.sf <- st_as_sf(sl.sp)
 # now you can use tidyverse::dplyr commands on the sf object, such as filter, et all
-sl.sf.ct <- sl.sf %>% 
-  filter(province == "BARCELONA" | province == "GIRONA" | province == "LLEIDA" | province == "TARRAGONA") %>% 
+sl.sf.ct.all <- sl.sf %>% 
+  filter(province == "BARCELONA" | province == "GIRONA" | province == "LLEIDA" | province == "TARRAGONA") 
+
+sl.sf.ct <- sl.sf.ct.all %>% 
   # Some stations where removed because downloading data from some years fail and break period loop to download data
   filter(ID != "9771C") %>% # Lleida
   filter(ID != "9987P") %>% # St Jaume d'Enveja
@@ -31,7 +33,8 @@ plot(sl.sf.ct["elevation"])
 
 # Now we download some rainfall data from aemet stations from catalonia
 # ID list from those stations:
-sl.ids <- sl.sf.ct$ID
+sl.ct.all.ids <- sl.sf.ct.all$ID
+sl.ct.ids <- sl.sf.ct$ID
 
 # Get Historical Data 
 #sl.hd <- downloadAEMEThistorical(Sys.getenv("r_aemet_token"), 
@@ -41,15 +44,31 @@ sl.ids <- sl.sf.ct$ID
 #sl.hd.sf <- st_as_sf(sl.hd)
 
 sl.today <- downloadAEMETcurrentday(Sys.getenv("r_aemet_token"), daily = TRUE, verbose = TRUE)
+sl.today.sf <- st_as_sf(sl.today)
+sl.today.sf.ct <- sl.today.sf %>% 
+  tibble::rownames_to_column() %>% 
+  filter(rowname %in% sl.ct.all.ids)
+plot(sl.today.sf.ct["Precipitation"])
 
-for (yy in 2012:2016) {
-  downloadAEMEThistorical(Sys.getenv("r_aemet_token"), 
-                          dates = seq(from=as.Date(paste0(yy, "-01-01")), to=as.Date(paste0(yy, "-12-31")), by=1),
-                          station_id = sl.ids,
-                          export=T,
-                          exportDir=file.path("precipitacio", "aemet", yy),
-                          exportFormat="meteoland/txt"
-  )
+# Display progress bar
+for (yy in 2019:2019) {
+  p <- progress_estimated(length(sl.ct.all.ids))
+  for (ss in 1:length(sl.ct.all.ids)){
+    cat(paste0("Loop item: ", ss, ", station: ", sl.ct.all.ids[ss]))
+    downloadAEMEThistorical(Sys.getenv("r_aemet_token"), 
+                            dates = seq(from=as.Date(paste0(yy, "-01-01")), to=as.Date(paste0(yy, "-12-31")), by=1),
+                            station_id = sl.ct.all.ids[ss],
+                            export=T,
+                            exportDir=file.path("precipitacio", "aemet", yy),
+                            exportFormat="meteoland/txt"
+    )
+    #rename station list file name to the name of this station to prevent getting overwritten by the next station
+    file.rename(file.path("precipitacio", "aemet", yy, "MP.txt"), 
+                file.path("precipitacio", "aemet", yy, paste0("MP_", sl.ct.all.ids[ss], ".txt"))
+    )
+    p$tick()$print()
+    cat("\n")
+  }
 }
 
 
