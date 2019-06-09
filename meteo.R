@@ -8,7 +8,7 @@ if (!require("pacman")) install.packages("pacman"); library(pacman)
 # https://cran.r-project.org/web/packages/meteoland/vignettes/UserGuide.html  
 # ----------------------------------
 # Load packages
-p_load(meteoland, dplyr, sf, lubridate)
+p_load(meteoland, tidyverse, dplyr, sf, lubridate)
 # get data from aemet
 sl.sp <- downloadAEMEThistoricalstationlist(Sys.getenv("r_aemet_token"))
 # display all stations with pacakge sp
@@ -20,13 +20,17 @@ sl.sf <- st_as_sf(sl.sp)
 sl.sf.ct.all <- sl.sf %>% 
   filter(province == "BARCELONA" | province == "GIRONA" | province == "LLEIDA" | province == "TARRAGONA") 
 
+write_csv(sl.sf.ct.all, path=file.path("precipitacio", "aemet", yy, "MP_ct_all.csv"))
+
 sl.sf.ct <- sl.sf.ct.all %>% 
   # Some stations where removed because downloading data from some years fail and break period loop to download data
   filter(ID != "9771C") %>% # Lleida
   filter(ID != "9987P") %>% # St Jaume d'Enveja
   filter(ID != "0255B") %>% # Santa Susanna
   filter(ID != "0367")  # Girona aeroport
-  
+
+write_csv(sl.sf.ct, path=file.path("precipitacio", "aemet", yy, "MP_ct_subset.csv"))
+
 # and then you can plot the sf object against some of the variables
 plot(sl.sf.ct["elevation"])
 
