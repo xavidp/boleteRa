@@ -107,6 +107,7 @@ d.sum <- d %>%
 
 # Attach side info from these stations through inner join
 d.sum.extra <- inner_join(d.sum, sl.sf.ct.all, by=c("Station"="ID"))
+d.sum.extra
 
 #plot(d.sum.extra["geometry"])
 
