@@ -8,7 +8,7 @@ if (!require("pacman")) install.packages("pacman"); library(pacman)
 # https://cran.r-project.org/web/packages/meteoland/vignettes/UserGuide.html  
 # ----------------------------------
 # Load packages
-p_load(meteoland, tidyverse, dplyr, sf, lubridate)
+p_load(meteoland, tidyverse, tidyr, dplyr, sf, lubridate, fs, tibbletime)
 # get data from aemet
 sl.sp <- downloadAEMEThistoricalstationlist(Sys.getenv("r_aemet_token"))
 # display all stations with pacakge sp
@@ -75,7 +75,69 @@ for (yy in 2019:2019) {
   }
 }
 
+# Read all meteo data in a R to end up producing a single data.frame with all data from all stations
+# File list (fl)
+fl <- fs::dir_ls(path=file.path("precipitacio", "aemet", yy), type="file",  regexp="/-?\\d+[a-zA-Z].txt$")
+#glob="*.txt",
 
+list.data <- list()
+for (f in fl) {
+  # Llegim l'arxiu i el desem en data.frame dins un element d'una llista
+  list.data[[f]] <- rio::import(fl[f], skip=1)
+}
+
+# Convert list of n df into one single df
+d <- bind_rows(list.data, .id = "column_label")
+colnames(d) <- c("Station", "Date", "Precipitation", "MeanTemperature", "MinTemperature", "MaxTemperature", "WindDirection", "WindSpeed", "SunshineHours")
+d$Station <- gsub("precipitacio/aemet/2019/", "", d$Station, fixed=T)
+d$Station <- gsub(".txt", "", d$Station, fixed=T)
+
+# Cumulative sum in rolling windows
+rollsum_5 <- tibbletime::rollify(sum, window = 5)
+d.sum <- d %>%
+  select(Station, Date, Precipitation) %>% 
+  group_by(Station, Date) %>%
+  summarise(Precipitation = sum(Precipitation)) %>%
+  mutate(cumsum = rollsum_5(Precipitation)) %>%
+  ungroup %>%
+  filter(Precipitation != 0) %>% 
+  filter(cumsum > 40)
+
+# Attach side info from these stations through inner join
+d.sum.extra <- inner_join(d.sum, sl.sf.ct.all, by=c("Station"="ID"))
+
+plot(d.sum.extra["geometry"])
+
+# Add a base map
+p_load(GADMTools); dir.create("dades/mapes/")
+gadm.esp <- gadm_sf_loadCountries(fileNames="ESP", level=4, basefile="dades/mapes/")
+gadm.bcn <- gadm_subset(gadm.esp, regions="Barcelona")
+bbox_cat_xy <- c(0.0652144217437066, 40.5150150670591, 3.33555501686516, 42.8839369882321)
+
+# Definim els límit del mapa de Catalunya
+x <- c(0.0652144217437066, 3.33555501686516)
+y <- c(40.5150150670591, 42.8839369882321)
+bbox_cat <- rbind(x, y); 
+colnames(bbox_cat) <- c("min", "max")
+
+p_load(ggmap)
+# Ampliem el requadre per mostrar mapa de fons
+bb = t(apply(bbox_cat, 1, bbexpand, .04))
+bb
+
+# Definim el mapa de fons
+bgMap = get_map(as.vector(bb), source = "osm",  maptype="roadmap", force=T) 
+# WGS84 for background map. 
+# Tweak get_map() with source= or maptype=
+ggmap(bgMap)
+# BBox of Catalonia
+# westBoundLongitude= 0.0652144217437066
+# eastBoundLongitude= 3.33555501686516
+# southBoundLatitude= 40.5150150670591
+# northBoundLatitude= 42.8839369882321
+cat.sf <- st_transform(d.sum.extra$geometry, st_crs(3857))
+plot(cat.sf, pch = 13, cex = 1.5, col="red", axes=TRUE)
+plot(cat.sf, bgMap = bgMap, pch = 16, cex = 1.5, col="red", axes=TRUE)
 
 
 # ============================================================================
