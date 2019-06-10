@@ -96,17 +96,19 @@ d$Station <- gsub(".txt", "", d$Station, fixed=T)
 rollsum_5 <- tibbletime::rollify(sum, window = 5)
 d.sum <- d %>%
   select(Station, Date, Precipitation) %>% 
+  mutate(Date = ymd(Date)) %>% 
   group_by(Station, Date) %>%
   summarise(Precipitation = sum(Precipitation)) %>%
   mutate(cumsum = rollsum_5(Precipitation)) %>%
   ungroup %>%
   filter(Precipitation != 0) %>% 
-  filter(cumsum > 40)
+  filter(cumsum > 40) %>% 
+  filter(Date >= today() - months(2))
 
 # Attach side info from these stations through inner join
 d.sum.extra <- inner_join(d.sum, sl.sf.ct.all, by=c("Station"="ID"))
 
-plot(d.sum.extra["geometry"])
+#plot(d.sum.extra["geometry"])
 
 # Add a base map
 p_load(GADMTools); dir.create("dades/mapes/")
@@ -129,16 +131,20 @@ bb
 bgMap = get_map(as.vector(bb), source = "osm",  maptype="roadmap", force=T) 
 # WGS84 for background map. 
 # Tweak get_map() with source= or maptype=
-ggmap(bgMap)
+#ggmap(bgMap)
 # BBox of Catalonia
 # westBoundLongitude= 0.0652144217437066
 # eastBoundLongitude= 3.33555501686516
 # southBoundLatitude= 40.5150150670591
 # northBoundLatitude= 42.8839369882321
 cat.sf <- st_transform(d.sum.extra$geometry, st_crs(3857))
-plot(cat.sf, pch = 13, cex = 1.5, col="red", axes=TRUE)
+#plot(cat.sf, pch = 13, cex = 1.5, col="red", axes=TRUE)
+# Map of stations with higher rainfall than threshold over period of interest
 plot(cat.sf, bgMap = bgMap, pch = 16, cex = 1.5, col="red", axes=TRUE)
 
+# Map with all stations in Catalonia from AEMET
+sl.sf.ct.all.3857 <- st_transform(sl.sf.ct.all["elevation"], st_crs(3857))
+plot(sl.sf.ct.all.3857, bgMap = bgMap, pch = 16, cex = 1.5, col="orange", axes=TRUE)
 
 # ============================================================================
 # WeeWX - Open source software for your weather station. 
