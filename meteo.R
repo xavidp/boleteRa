@@ -9,109 +9,10 @@ if (!require("pacman")) install.packages("pacman"); library(pacman)
 # ----------------------------------
 # Load packages
 p_load(meteoland, tidyverse, tidyr, dplyr, sf, lubridate, fs, tibbletime)
-# get data from aemet
-sl.sp <- downloadAEMEThistoricalstationlist(Sys.getenv("r_aemet_token"))
-# display all stations with pacakge sp
-plot(sl.sp)
 
-# convert sp object to sf (Simple features)
-sl.sf <- st_as_sf(sl.sp)
-# now you can use tidyverse::dplyr commands on the sf object, such as filter, et all
-sl.sf.ct.all <- sl.sf %>% 
-  filter(province == "BARCELONA" | province == "GIRONA" | province == "LLEIDA" | province == "TARRAGONA") 
-
-write_csv(sl.sf.ct.all, path=file.path("precipitacio", "aemet", yy, "MP_ct_all.csv"))
-
-sl.sf.ct <- sl.sf.ct.all %>% 
-  # Some stations where removed because downloading data from some years fail and break period loop to download data
-  filter(ID != "9771C") %>% # Lleida
-  filter(ID != "9987P") %>% # St Jaume d'Enveja
-  filter(ID != "0255B") %>% # Santa Susanna
-  filter(ID != "0367")  # Girona aeroport
-
-write_csv(sl.sf.ct, path=file.path("precipitacio", "aemet", yy, "MP_ct_subset.csv"))
-
-# and then you can plot the sf object against some of the variables
-plot(sl.sf.ct["elevation"])
-
-
-# Now we download some rainfall data from aemet stations from catalonia
-# ID list from those stations:
-sl.ct.all.ids <- sl.sf.ct.all$ID
-sl.ct.ids <- sl.sf.ct$ID
-
-# Get Historical Data 
-#sl.hd <- downloadAEMEThistorical(Sys.getenv("r_aemet_token"), 
-#                                 dates = seq(from=as.Date("2019-05-01"), to=as.Date("2019-06-01"), by=1),
-#                                 station_id = sl.ids[1])
-#class(sl.hd)
-#sl.hd.sf <- st_as_sf(sl.hd)
-
-sl.today <- downloadAEMETcurrentday(Sys.getenv("r_aemet_token"), daily = TRUE, verbose = TRUE)
-sl.today.sf <- st_as_sf(sl.today)
-sl.today.sf.ct <- sl.today.sf %>% 
-  tibble::rownames_to_column() %>% 
-  filter(rowname %in% sl.ct.all.ids)
-plot(sl.today.sf.ct["Precipitation"])
-
-# Display progress bar
-for (yy in 2019:2019) {
-  p <- progress_estimated(length(sl.ct.all.ids))
-  for (ss in 1:length(sl.ct.all.ids)){
-    cat(paste0("Loop item: ", ss, ", station: ", sl.ct.all.ids[ss]))
-    downloadAEMEThistorical(Sys.getenv("r_aemet_token"), 
-                            dates = seq(from=as.Date(paste0(yy, "-01-01")), to=as.Date(paste0(yy, "-12-31")), by=1),
-                            station_id = sl.ct.all.ids[ss],
-                            export=T,
-                            exportDir=file.path("precipitacio", "aemet", yy),
-                            exportFormat="meteoland/txt"
-    )
-    #rename station list file name to the name of this station to prevent getting overwritten by the next station
-    file.rename(file.path("precipitacio", "aemet", yy, "MP.txt"), 
-                file.path("precipitacio", "aemet", yy, paste0("MP_", sl.ct.all.ids[ss], ".txt"))
-    )
-    p$tick()$print()
-    cat("\n")
-  }
-}
-
-# Read all meteo data in a R to end up producing a single data.frame with all data from all stations
-# File list (fl)
-fl <- fs::dir_ls(path=file.path("precipitacio", "aemet", yy), type="file",  regexp="/-?\\d+[a-zA-Z].txt$")
-#glob="*.txt",
-
-list.data <- list()
-for (f in fl) {
-  # Llegim l'arxiu i el desem en data.frame dins un element d'una llista
-  list.data[[f]] <- rio::import(fl[f], skip=1)
-}
-
-# Convert list of n df into one single df
-d <- bind_rows(list.data, .id = "column_label")
-colnames(d) <- c("Station", "Date", "Precipitation", "MeanTemperature", "MinTemperature", "MaxTemperature", "WindDirection", "WindSpeed", "SunshineHours")
-d$Station <- gsub("precipitacio/aemet/2019/", "", d$Station, fixed=T)
-d$Station <- gsub(".txt", "", d$Station, fixed=T)
-
-# Cumulative sum in rolling windows
-rollsum_5 <- tibbletime::rollify(sum, window = 5)
-d.sum <- d %>%
-  select(Station, Date, Precipitation) %>% 
-  mutate(Date = ymd(Date)) %>% 
-  group_by(Station, Date) %>%
-  summarise(Precipitation = sum(Precipitation)) %>%
-  mutate(cumsum = rollsum_5(Precipitation)) %>%
-  ungroup %>%
-  filter(Precipitation != 0) %>% 
-  filter(cumsum > 40) %>% 
-  filter(Date >= today() - months(2))
-
-# Attach side info from these stations through inner join
-d.sum.extra <- inner_join(d.sum, sl.sf.ct.all, by=c("Station"="ID"))
-d.sum.extra
-
-#plot(d.sum.extra["geometry"])
-
+# ------------------------------------------
 # Add a base map
+# ------------------------------------------
 p_load(GADMTools); dir.create("dades/mapes/")
 gadm.esp <- gadm_sf_loadCountries(fileNames="ESP", level=4, basefile="dades/mapes/")
 gadm.bcn <- gadm_subset(gadm.esp, regions="Barcelona")
@@ -138,12 +39,138 @@ bgMap = get_map(as.vector(bb), source = "osm",  maptype="roadmap", force=T)
 # eastBoundLongitude= 3.33555501686516
 # southBoundLatitude= 40.5150150670591
 # northBoundLatitude= 42.8839369882321
+
+# ------------------------------------------
+# get data from aemet
+# ------------------------------------------
+sl.sp <- downloadAEMEThistoricalstationlist(Sys.getenv("r_aemet_token"))
+# display all stations with pacakge sp
+plot(sl.sp)
+
+# convert sp object to sf (Simple features)
+sl.sf <- st_as_sf(sl.sp)
+# now you can use tidyverse::dplyr commands on the sf object, such as filter, et all
+sl.sf.ct.all <- sl.sf %>% 
+  filter(province == "BARCELONA" | province == "GIRONA" | province == "LLEIDA" | province == "TARRAGONA") 
+
+write_csv(sl.sf.ct.all, path=file.path("precipitacio", "aemet", yy, "MP_ct_all.csv"))
+
+sl.sf.ct <- sl.sf.ct.all %>% 
+  # Some stations where removed because downloading data from some years fail and break period loop to download data
+  filter(ID != "9771C") %>% # Lleida
+  filter(ID != "9987P") %>% # St Jaume d'Enveja
+  filter(ID != "0255B") %>% # Santa Susanna
+  filter(ID != "0367")  # Girona aeroport
+
+# ------------------------------------------
+# Write data to disk
+# ------------------------------------------
+write_csv(sl.sf.ct, path=file.path("precipitacio", "aemet", yy, "MP_ct_subset.csv"))
+
+# and then you can plot the sf object against some of the variables
+plot(sl.sf.ct["elevation"])
+
+# ------------------------------------------
+# Get STation IDs
+# ------------------------------------------
+# Now we download some rainfall data from aemet stations from catalonia
+# ID list from those stations:
+sl.ct.all.ids <- sl.sf.ct.all$ID
+sl.ct.ids <- sl.sf.ct$ID
+
+# ------------------------------------------
+# Get Historical Data - TODAY
+# ------------------------------------------
+sl.today <- downloadAEMETcurrentday(Sys.getenv("r_aemet_token"), daily = TRUE, verbose = TRUE)
+sl.today.sf <- st_as_sf(sl.today)
+sl.today.sf.ct <- sl.today.sf %>% 
+  tibble::rownames_to_column() %>% 
+  filter(rowname %in% sl.ct.all.ids)
+plot(sl.today.sf.ct["Precipitation"])
+
+# Map with all stations in Catalonia from today's rainfall from AEMET datasets
+sl.today.sf.ct.3857 <- st_transform(sl.today.sf.ct, st_crs(3857))
+plot(sl.today.sf.ct.3857["Precipitation"], bgMap = bgMap, pch = 16, cex = 1.5, axes=TRUE)
+# ------------------------------------------
+
+# ------------------------------------------
+# Fetch Historical Data
+# ------------------------------------------
+# Display progress bar
+for (yy in 2019:2019) {
+  p <- progress_estimated(length(sl.ct.all.ids))
+  for (ss in 1:length(sl.ct.all.ids)){
+    cat(paste0("Loop item: ", ss, ", station: ", sl.ct.all.ids[ss]))
+    downloadAEMEThistorical(Sys.getenv("r_aemet_token"), 
+                            dates = seq(from=as.Date(paste0(yy, "-01-01")), to=as.Date(paste0(yy, "-12-31")), by=1),
+                            station_id = sl.ct.all.ids[ss],
+                            export=T,
+                            exportDir=file.path("precipitacio", "aemet", yy),
+                            exportFormat="meteoland/txt"
+    )
+    #rename station list file name to the name of this station to prevent getting overwritten by the next station
+    file.rename(file.path("precipitacio", "aemet", yy, "MP.txt"), 
+                file.path("precipitacio", "aemet", yy, paste0("MP_", sl.ct.all.ids[ss], ".txt"))
+    )
+    p$tick()$print()
+    cat("\n")
+  }
+}
+
+# ------------------------------------------
+# Massage data to aggregate records in a single Data frame
+# ------------------------------------------
+# Read all meteo data in a R to end up producing a single data.frame with all data from all stations
+# File list (fl)
+fl <- fs::dir_ls(path=file.path("precipitacio", "aemet", yy), type="file",  regexp="/-?\\d+[a-zA-Z].txt$")
+#glob="*.txt",
+
+list.data <- list()
+for (f in fl) {
+  # Llegim l'arxiu i el desem en data.frame dins un element d'una llista
+  list.data[[f]] <- rio::import(fl[f], skip=1)
+}
+
+# Convert list of n df into one single df
+d <- bind_rows(list.data, .id = "column_label")
+colnames(d) <- c("Station", "Date", "Precipitation", "MeanTemperature", "MinTemperature", "MaxTemperature", "WindDirection", "WindSpeed", "SunshineHours")
+d$Station <- gsub("precipitacio/aemet/2019/", "", d$Station, fixed=T)
+d$Station <- gsub(".txt", "", d$Station, fixed=T)
+
+
+# ------------------------------------------
+# Cumulative rainfall sum in rolling windows
+# ------------------------------------------
+rollsum_5 <- tibbletime::rollify(sum, window = 5)
+d.sum <- d %>%
+  select(Station, Date, Precipitation) %>% 
+  mutate(Date = ymd(Date)) %>% 
+  group_by(Station, Date) %>%
+  summarise(Precipitation = sum(Precipitation)) %>%
+  mutate(cumsum = rollsum_5(Precipitation)) %>%
+  ungroup %>%
+  filter(Precipitation != 0) %>% 
+  filter(cumsum > 40) %>% 
+  filter(Date >= today() - months(2))
+
+
+# ------------------------------------------
+# Attach side info from these stations through inner join
+# ------------------------------------------
+d.sum.extra <- inner_join(d.sum, sl.sf.ct.all, by=c("Station"="ID"))
+d.sum.extra
+
+# ------------------------------------------
+# Map of stations with higher rainfall than threshold over period of interest
+# ------------------------------------------
+#plot(d.sum.extra["geometry"])
 cat.sf <- st_transform(d.sum.extra$geometry, st_crs(3857))
 #plot(cat.sf, pch = 13, cex = 1.5, col="red", axes=TRUE)
-# Map of stations with higher rainfall than threshold over period of interest
 plot(cat.sf, bgMap = bgMap, pch = 16, cex = 1.5, col="red", axes=TRUE)
 
+# ------------------------------------------
 # Map with all stations in Catalonia from AEMET
+# ------------------------------------------
 sl.sf.ct.all.3857 <- st_transform(sl.sf.ct.all["elevation"], st_crs(3857))
 plot(sl.sf.ct.all.3857, bgMap = bgMap, pch = 16, cex = 1.5, col="orange", axes=TRUE)
 
