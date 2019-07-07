@@ -8,7 +8,7 @@ if (!require("pacman")) install.packages("pacman"); library(pacman)
 # https://cran.r-project.org/web/packages/meteoland/vignettes/UserGuide.html  
 # ----------------------------------
 # Load packages
-p_load(meteoland, tidyverse, tidyr, dplyr, sf, lubridate, fs, tibbletime)
+p_load(meteoland, tidyverse, tidyr, dplyr, sf, lubridate, fs, tibbletime, janitor, scales)
 
 # ------------------------------------------
 # Add a base map
@@ -44,28 +44,60 @@ bgMap = get_map(as.vector(bb), source = "osm",  maptype="roadmap", force=T)
 # get data from smc
 # ------------------------------------------
 smc.stations <- downloadSMCstationlist(api=Sys.getenv("r_smc_api_key"), date=as.Date("2019-07-06"))
+smc.sl <- smc.stations
+smc.sl.sp <- smc.sl
+smc.sl.sf <- st_as_sf(smc.sl.sp) %>% 
+  mutate(elev_range=case_when(
+    ceiling(elevation) %in% 0:299 ~ "a.0_300m",
+    ceiling(elevation) %in% 300:599 ~ "b.300_600m",
+    ceiling(elevation) %in% 600:899 ~ "c.600_900m",
+    ceiling(elevation) %in% 900:1199 ~ "d.900_1200m",
+    ceiling(elevation) %in% 1200:1499 ~ "e.1200_1500m",
+    ceiling(elevation) %in% 1500:1799 ~ "f.1500_1800m",
+    ceiling(elevation) %in% 1800:4000 ~ "g.1800m_..."
+  )) %>% 
+  mutate(col=case_when(
+    ceiling(elevation) %in% 0:299 ~ alpha("green", 0.4), # For an alpha of 0.4, i. e. an opacity of 40%.)
+    ceiling(elevation) %in% 300:599 ~ alpha("orange", 0.4),
+    ceiling(elevation) %in% 600:899 ~ alpha("blue", 0.4),
+    ceiling(elevation) %in% 900:1199 ~ alpha("pink", 0.4),
+    ceiling(elevation) %in% 1200:1499 ~ alpha("lightgreen", 0.4),
+    ceiling(elevation) %in% 1500:1799 ~ alpha("yellow", 0.4),
+    ceiling(elevation) %in% 1800:4000 ~ alpha("brown", 0.4)
+  ))
+
+tabyl(smc.sl.sf$elev_range) %>% adorn_totals()
+tabyl(smc.sl.sf$province) %>% adorn_totals()
+table(smc.sl.sf$province, smc.sl.sf$elev_range) %>% data.frame() %>% arrange(Var1) %>% adorn_totals()
+tabyl(smc.sl.sf$county)
+
+# Map with all stations in Catalonia from today's rainfall from SMC datasets
+smc.sl.sf.3857 <- st_transform(smc.sl.sf, st_crs(3857))
+plot(smc.sl.sf.3857["elev_range"], bgMap = bgMap, pch = 16, cex = 1.5, axes=TRUE, col = smc.sl.sf.3857["col"]) 
+plot(smc.sl.sf.3857["elev_range"], bgMap = bgMap, pch = 16, cex = 1.5, axes=TRUE) 
+warnings()
 smc.meta <- downloadSMCvarmetadata(api=Sys.getenv("r_smc_api_key"))
 smc.today <-downloadSMCcurrentday(api=Sys.getenv("r_smc_api_key"))
-smc.sl <- row.names(smc.today)
+smc.sl.id <- row.names(smc.today)
 plot(smc.today)
 # ------------------------------------------
 # Fetch Historical Data
 # ------------------------------------------
 # Display progress bar
 for (yy in 2018:2018) {
-  p <- progress_estimated(length(smc.sl))
-  for (ss in 1:length(smc.sl)){
-    cat(paste0("Loop item: ", ss, ", station: ", smc.sl[ss]))
+  p <- progress_estimated(length(smc.sl.id))
+  for (ss in 1:length(smc.sl.id)){
+    cat(paste0("Loop item: ", ss, ", station: ", smc.sl.id[ss]))
     downloadSMChistorical(api=Sys.getenv("r_smc_api_key"), 
                             dates = seq(from=as.Date(paste0(yy, "-01-01")), to=as.Date(paste0(yy, "-12-31")), by=1),
-                            station_id = smc.sl[ss],
+                            station_id = smc.sl.id[ss],
                             export=T,
-                            exportDir=file.path("precipitacio", "smc", yy),
+                            exportDir=file.path("precipitacio", "_smc", yy),
                             exportFormat="meteoland/txt"
     )
     #rename station list file name to the name of this station to prevent getting overwritten by the next station
-    file.rename(file.path("precipitacio", "smc", yy, "MP.txt"), 
-                file.path("precipitacio", "smc", yy, paste0("MP_", smc.sl[ss], ".txt"))
+    file.rename(file.path("precipitacio", "_smc", yy, "MP.txt"), 
+                file.path("precipitacio", "_smc", yy, paste0("MP_", smc.sl.id[ss], ".txt"))
     )
     p$tick()$print()
     cat("\n")
@@ -85,7 +117,7 @@ sl.sf <- st_as_sf(sl.sp)
 sl.sf.ct.all <- sl.sf %>% 
   filter(province == "BARCELONA" | province == "GIRONA" | province == "LLEIDA" | province == "TARRAGONA") 
 
-write_csv(sl.sf.ct.all, path=file.path("precipitacio", "aemet", yy, "MP_ct_all.csv"))
+write_csv(sl.sf.ct.all, path=file.path("precipitacio", "_aemet", yy, "MP_ct_all.csv"))
 
 sl.sf.ct <- sl.sf.ct.all %>% 
   # Some stations where removed because downloading data from some years fail and break period loop to download data
@@ -97,7 +129,7 @@ sl.sf.ct <- sl.sf.ct.all %>%
 # ------------------------------------------
 # Write data to disk
 # ------------------------------------------
-write_csv(sl.sf.ct, path=file.path("precipitacio", "aemet", yy, "MP_ct_subset.csv"))
+write_csv(sl.sf.ct, path=file.path("precipitacio", "_aemet", yy, "MP_ct_subset.csv"))
 
 # and then you can plot the sf object against some of the variables
 plot(sl.sf.ct["elevation"])
@@ -137,12 +169,12 @@ for (yy in 2019:2019) {
                             dates = seq(from=as.Date(paste0(yy, "-01-01")), to=as.Date(paste0(yy, "-12-31")), by=1),
                             station_id = sl.ct.all.ids[ss],
                             export=T,
-                            exportDir=file.path("precipitacio", "aemet", yy),
+                            exportDir=file.path("precipitacio", "_aemet", yy),
                             exportFormat="meteoland/txt"
     )
     #rename station list file name to the name of this station to prevent getting overwritten by the next station
-    file.rename(file.path("precipitacio", "aemet", yy, "MP.txt"), 
-                file.path("precipitacio", "aemet", yy, paste0("MP_", sl.ct.all.ids[ss], ".txt"))
+    file.rename(file.path("precipitacio", "_aemet", yy, "MP.txt"), 
+                file.path("precipitacio", "_aemet", yy, paste0("MP_", sl.ct.all.ids[ss], ".txt"))
     )
     p$tick()$print()
     cat("\n")
@@ -154,7 +186,7 @@ for (yy in 2019:2019) {
 # ------------------------------------------
 # Read all meteo data in a R to end up producing a single data.frame with all data from all stations
 # File list (fl)
-fl <- fs::dir_ls(path=file.path("precipitacio", "aemet", yy), type="file",  regexp="/-?\\d+[a-zA-Z].txt$")
+fl <- fs::dir_ls(path=file.path("precipitacio", "_aemet", yy), type="file",  regexp="/-?\\d+[a-zA-Z].txt$")
 #glob="*.txt",
 
 list.data <- list()
