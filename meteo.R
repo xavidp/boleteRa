@@ -41,6 +41,38 @@ bgMap = get_map(as.vector(bb), source = "osm",  maptype="roadmap", force=T)
 # northBoundLatitude= 42.8839369882321
 
 # ------------------------------------------
+# get data from smc
+# ------------------------------------------
+smc.stations <- downloadSMCstationlist(api=Sys.getenv("r_smc_api_key"), date=as.Date("2019-07-06"))
+smc.meta <- downloadSMCvarmetadata(api=Sys.getenv("r_smc_api_key"))
+smc.today <-downloadSMCcurrentday(api=Sys.getenv("r_smc_api_key"))
+smc.sl <- row.names(smc.today)
+plot(smc.today)
+# ------------------------------------------
+# Fetch Historical Data
+# ------------------------------------------
+# Display progress bar
+for (yy in 2018:2018) {
+  p <- progress_estimated(length(smc.sl))
+  for (ss in 1:length(smc.sl)){
+    cat(paste0("Loop item: ", ss, ", station: ", smc.sl[ss]))
+    downloadSMChistorical(api=Sys.getenv("r_smc_api_key"), 
+                            dates = seq(from=as.Date(paste0(yy, "-01-01")), to=as.Date(paste0(yy, "-12-31")), by=1),
+                            station_id = smc.sl[ss],
+                            export=T,
+                            exportDir=file.path("precipitacio", "smc", yy),
+                            exportFormat="meteoland/txt"
+    )
+    #rename station list file name to the name of this station to prevent getting overwritten by the next station
+    file.rename(file.path("precipitacio", "smc", yy, "MP.txt"), 
+                file.path("precipitacio", "smc", yy, paste0("MP_", smc.sl[ss], ".txt"))
+    )
+    p$tick()$print()
+    cat("\n")
+  }
+}
+
+# ------------------------------------------
 # get data from aemet
 # ------------------------------------------
 sl.sp <- downloadAEMEThistoricalstationlist(Sys.getenv("r_aemet_token"))
