@@ -65,6 +65,7 @@ smc.sl.sf <- st_as_sf(smc.sl.sp) %>%
     ceiling(elevation) %in% 1500:1799 ~ alpha("yellow", 0.4),
     ceiling(elevation) %in% 1800:4000 ~ alpha("brown", 0.4)
   ))
+write_csv(smc.sl.sf, file.path("precipitacio", "_smc", paste0(as_date(now(), "%Y%m%d"), "_smc_station_list.txt")))
 
 tabyl(smc.sl.sf$elev_range) %>% adorn_totals()
 tabyl(smc.sl.sf$province) %>% adorn_totals()
@@ -78,8 +79,15 @@ plot(smc.sl.sf.3857["elev_range"], bgMap = bgMap, pch = 16, cex = 1.5, axes=TRUE
 warnings()
 smc.meta <- downloadSMCvarmetadata(api=Sys.getenv("r_smc_api_key"))
 smc.today <-downloadSMCcurrentday(api=Sys.getenv("r_smc_api_key"))
+head(smc.today)
+summary(smc.today)
+
 smc.sl.id <- row.names(smc.today)
 plot(smc.today)
+smc.today.sf.3857 <- st_as_sf(smc.today) %>% st_transform(st_crs(3857))
+#plot(smc.today["Precipitation"])
+plot(smc.today.sf.3857["Precipitation"], bgMap = bgMap, pch = 16, cex = 1.5, axes=TRUE) 
+
 # ------------------------------------------
 # Fetch Historical Data
 # ------------------------------------------
