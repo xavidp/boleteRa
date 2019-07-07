@@ -87,7 +87,7 @@ plot(smc.today)
 for (yy in 2018:2018) {
   p <- progress_estimated(length(smc.sl.id))
   for (ss in 1:length(smc.sl.id)){
-    cat(paste0("Loop item: ", ss, ", station: ", smc.sl.id[ss]))
+    cat(paste0("\nLoop item: ", ss, ", station: ", smc.sl.id[ss]))
     downloadSMChistorical(api=Sys.getenv("r_smc_api_key"), 
                             dates = seq(from=as.Date(paste0(yy, "-01-01")), to=as.Date(paste0(yy, "-12-31")), by=1),
                             station_id = smc.sl.id[ss],
@@ -164,7 +164,7 @@ plot(sl.today.sf.ct.3857["Precipitation"], bgMap = bgMap, pch = 16, cex = 1.5, a
 for (yy in 2019:2019) {
   p <- progress_estimated(length(sl.ct.all.ids))
   for (ss in 1:length(sl.ct.all.ids)){
-    cat(paste0("Loop item: ", ss, ", station: ", sl.ct.all.ids[ss]))
+    cat(paste0("\nLoop item: ", ss, ", station: ", sl.ct.all.ids[ss]))
     downloadAEMEThistorical(Sys.getenv("r_aemet_token"), 
                             dates = seq(from=as.Date(paste0(yy, "-01-01")), to=as.Date(paste0(yy, "-12-31")), by=1),
                             station_id = sl.ct.all.ids[ss],
