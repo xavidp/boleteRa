@@ -1,3 +1,9 @@
+# First you can check whether the data your are looking for is available in the opendata portal from Generalitat de Catalunya
+# See:
+# http://www.meteo.cat/wpweb/serveis/cataleg-de-serveis/serveis-oberts/dades-obertes/
+# https://analisi.transparenciacatalunya.cat/Medi-Ambient/Dades-meteorol-giques-de-la-XEMA/nzvn-apee/data
+# http://governobert.gencat.cat/ca/dades_obertes/
+
 #Get historical wheather data (rainfall, temp) through WU
 if (!require("devtools")) install.packages("devtools"); library(devtools)
 if (!require("pacman")) install.packages("pacman"); library(pacman)
