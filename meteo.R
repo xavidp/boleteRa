@@ -98,12 +98,12 @@ plot(smc.today.sf.3857["Precipitation"], bgMap = bgMap, pch = 16, cex = 1.5, axe
 # Fetch Historical Data
 # ------------------------------------------
 # Display progress bar
-for (yy in 2018:2018) {
+for (yy in 2019:2019) {
   p <- progress_estimated(length(smc.sl.id))
   for (ss in 1:length(smc.sl.id)){
     cat(paste0("\nLoop item: ", ss, ", station: ", smc.sl.id[ss]))
     downloadSMChistorical(api=Sys.getenv("r_smc_api_key"), 
-                            dates = seq(from=as.Date(paste0(yy, "-01-01")), to=as.Date(paste0(yy, "-12-31")), by=1),
+                            dates = seq(from=as.Date(paste0(yy, "-07-01")), to=as.Date(paste0(yy, "-07-31")), by=1),
                             station_id = smc.sl.id[ss],
                             export=T,
                             exportDir=file.path("precipitacio", "_smc", yy),
