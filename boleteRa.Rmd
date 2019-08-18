@@ -498,6 +498,8 @@ my.smc.nn.list <- unique(md.sf$nn.smc.id)
 my.smc.df <- my.meteo.smc.sf %>% 
   filter(ID %in% my.smc.nn.list)
 my.smc.df
+# Store a copy of that list to disk just in case I need it in the future in a handy way
+write_csv(my.smc.df, file.path(path.data, paste0(results.fname.noext,"_smc_station_list_subset.csv")))
 
 plot(my.smc.df["elev_range"])
 # ---
