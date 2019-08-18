@@ -415,7 +415,7 @@ if (FALSE) {
 
 ## Get historical wheather data (rainfall, temp)
 
-### Get historical wheather data (rainfall, temp) - by WeeWX powered Catalan weather stations
+### Get Nearest station by WeeWX powered Catalan weather stations
 
 ```{r Get historical wheather data (rainfall, temp) - by WeeWX powered Catalan weather stations}
 #Code Will Come here
@@ -447,13 +447,72 @@ md.nona <- md %>%
   filter(!is.na(Latitude))
 
 # Find the nearest neighbour (nn) meteo station id to each citation point  
-md.nona$nn.meteo.id<- apply(gDistance(my.meteo.sp, md.sp, byid=TRUE), 1, which.min)
+md.nona$nn.meteo.id <- apply(gDistance(my.meteo.sp, md.sp, byid=TRUE), 1, which.min)
 
 md.nona <- left_join(md.nona, my.meteo, by=c("nn.meteo.id" = "id")) %>%
-  select(c(colnames(md.nona), nn.meteo = name)) 
+  select(cid, nn.meteo = name)
 
-rbind(head(md.nona), tail(md.nona))[,c(2,20,23,3,4)]
+rbind(head(md.nona), tail(md.nona))
 
+md <- left_join(md, md.nona, by=c("cid"))
+md
+```
+
+### Get Nearest station from the Servei de Meteorolgia de Catalunya (SMC)
+
+```{r Get Nearest station from the Servei de Meteorolgia de Catalunya (SMC)}
+# Find the nearest weather station to each citation point
+# Dereived from: https://stackoverflow.com/a/27444208
+pacman::p_load(sf, tidyverse)
+md.n <- nrow(md)
+md.s <- structure(list(lon = md$Longitude, lat = md$Latitude), .Names = c("lon", 
+       "lat"), row.names = c(NA, md.n), class = "data.frame")
+nrow(md.s)
+md.s <- md.s %>%
+  filter(!is.na(lat))
+nrow(md.s)
+md.sf <- st_as_sf(md %>% filter(!is.na(Latitude)), 
+                  coords = c("Longitude", "Latitude"), 
+                  crs = 4326)
+
+# Load SMC station list
+smc.sl.files <- list.files(file.path("precipitacio", "_smc"), pattern = "*.smc_station_list.txt")
+# Get the name of the last file to hold smc station list
+my.meteo.smc <- rio::import(file.path("precipitacio", "_smc", smc.sl.files[length(smc.sl.files)]))
+
+my.meteo.smc <- my.meteo.smc %>%
+  mutate(geo2 = str_replace(geometry, "c\\(", "")) %>% 
+  mutate(geo2 = str_replace(geo2, ",", "")) %>% 
+  mutate(geo2 = str_replace(geo2, "\\)", "")) %>% 
+  separate(geo2, into=c("lon", "lat"), sep=" ") %>% 
+  mutate_at(c("lon", "lat"), as.numeric)
+
+my.meteo.smc.sf <- st_as_sf(my.meteo.smc, coords = c("lon", "lat"), crs = 4326)
+
+# Get the id of the nearest smc meteorological stations
+nn.smc.idx <- st_nearest_feature(md.sf, my.meteo.smc.sf)
+md.sf$nn.smc.id <- my.meteo.smc.sf[nn.smc.idx,]$ID
+md.sf$nn.smc.name <- my.meteo.smc.sf[nn.smc.idx,]$name
+
+my.smc.nn.list <- unique(md.sf$nn.smc.id)
+my.smc.df <- my.meteo.smc.sf %>% 
+  filter(ID %in% my.smc.nn.list)
+my.smc.df
+
+plot(my.smc.df["elev_range"])
+# ---
+
+# GEt a subset of the my data with no NA
+md.sf.nona <- md.sf %>%
+  filter(!is.na(geometry))
+
+md.sf.nona <- left_join(md.sf.nona, my.meteo.smc, by=c("nn.smc.id" = "ID")) %>%
+  select(cid, nn.meteo = name)
+
+rbind(head(md.sf.nona), tail(md.sf.nona))
+
+md.sf <- left_join(md.sf, st_set_geometry(md.sf.nona, NULL), by=c("cid"))
+md.sf
 
 
 ```
@@ -464,8 +523,13 @@ rbind(head(md.nona), tail(md.nona))[,c(2,20,23,3,4)]
 ```{r Save extended results data set as Spreadsheet and csv (just in case)}
 #str(md)
 results.fname.noext <- paste0("_120000_", format(Sys.Date(), "%y%m"), "00_data")
-readr::write_csv(md, file.path(path.data, paste0(results.fname.noext,".csv")))
-openxlsx::write.xlsx(md, file = file.path(path.data, paste0(results.fname.noext, ".xlsx")))
+readr::write_csv(md.sf, file.path(path.data, paste0(results.fname.noext,".csv")))
+# In order to save as xlsx, I need to remove the geometry column and sf class from the md.sf
+md.sf <- md.sf %>% mutate(lon = unlist(map(md.sf$geometry,1)),
+           lat = unlist(map(md.sf$geometry,2)))
+md <- st_set_geometry(md.sf, NULL)
+openxlsx::write.xlsx(md, 
+                     file = file.path(path.data, paste0(results.fname.noext, ".xlsx")))
 
 ```
 
@@ -561,22 +625,13 @@ print.saveas <- function(x, ...){
     addProviderTiles("Esri.NatGeoWorldMap", group = "National Geographic") %>%
     addProviderTiles("Esri.WorldImagery", group = "Satellite") %>%
 
-      # Layers control
-    addLayersControl(position = 'bottomright',
-                     #overlayGroups = c("Hiking routes", "Photo markers"),
-                     options = layersControlOptions(collapsed = FALSE),
-                     baseGroups = c("Road map",
-                                    "National Geographic", 
-                                    "Satellite")
-                     ) %>%
-    
 #    addMarkers(~Longitude, ~Latitude, 
 #               label = ~as.character(nom_comestible), 
 #               popup = ~as.character(foto)
 #               ) %>%
     addMiniMap(zoomLevelOffset = -5) %>%
     addCircleMarkers(
-      ~Longitude, ~Latitude, 
+      ~lon, ~lat, 
        label = ~as.character(nom_comestible), 
        popup = ~paste0(nom_comestible, " | ", nom_nocomestible,
                        "<br>Detalls del bolet: ", Detalls_bolet,
@@ -593,8 +648,28 @@ print.saveas <- function(x, ...){
       radius = ~ifelse(!is.na(nom_comestible), 6, 10),
       color = ~palette(rainbow(96)),
 #      clusterOptions = markerClusterOptions(),
-      stroke = FALSE, fillOpacity = 0.5
-  )
+      stroke = FALSE, fillOpacity = 0.5,
+      group="Citations"
+    ) %>% 
+    addCircleMarkers(
+      ~lon, ~lat, 
+       label = ~as.character(nn.smc.name), 
+       popup = ~paste0(nn.smc.id, " | ", nn.smc.name),
+      radius = 3,
+      color = "black",
+#      clusterOptions = markerClusterOptions(),
+      stroke = FALSE, fillOpacity = 0.05,
+      group="Stations"
+    ) %>% 
+    # Layers control
+    addLayersControl(position = 'bottomright',
+                     overlayGroups = c("Citations", "Stations"),
+                     options = layersControlOptions(collapsed = FALSE),
+                     baseGroups = c("Road map",
+                                    "National Geographic", 
+                                    "Satellite")
+                     )
+    
   
 
   ll.md
@@ -626,9 +701,9 @@ See: https://r-spatial.github.io/mapview/
 p_load(sf)
 p_load(mapview)
 md.nona <- md %>%
-  filter(!is.na(Longitude))
+  filter(!is.na(lon))
 md.sf <- st_as_sf(x = md.nona, 
-                        coords = c("Longitude", "Latitude"),
+                        coords = c("lon", "lat"),
                         crs = "+proj=longlat +datum=WGS84")
 # simple plot
 plot(md.sf)
@@ -685,8 +760,8 @@ md.sample <- md %>%
 #    NomNC=`nom vulgar (no comestible)`,
 #    DetallBolet=`Detalls del bolet`,
     DescripcioLloc=`Descripcio_Lloc`,
-    Lat=Latitude,
-    Long=Longitude) %>%
+    Lat=lat,
+    Long=lon) %>%
   filter(!is.na(NomC)) %>%
   filter(NomC != "---") %>%
   filter(NomC != "altres") %>%
