@@ -209,10 +209,11 @@ md$Descripcio_Lloc <- gsub("NA_", "", md$Descripcio_Lloc)
 ## Add Missing Altitudes and Toponimc Location info
 
 ```{r Add Missing Altitudes}
-fname.extra.info <- paste0("_120000_", format(Sys.Date(), "%y%m"), "00_extra_info.csv")
+fname.extra.info.last <- "_120000_last_extra_info.csv"
+fname.extra.info.current <- paste0("_120000_", format(Sys.Date(), "%y%m"), "00_extra_info.csv")
 
-if (file.exists(file.path(path.data, fname.extra.info))) {
- extra.info.tmp <- readr::read_csv(file.path(path.data, fname.extra.info))  
+if (file.exists(file.path(path.data, fname.extra.info.last))) {
+ extra.info.tmp <- readr::read_csv(file.path(path.data, fname.extra.info.last))  
 } else {
   extra.info.tmp <- data.frame("NA")
   colnames(extra.info.tmp)[1] <- "cid"
@@ -339,7 +340,9 @@ extra.info <- md %>%
          )
 
 # Desa arxiu amb extra info a disc per poder reemprar la info posteriors vegades
-readr::write_csv(extra.info, file.path(path.data, fname.extra.info))
+readr::write_csv(extra.info, file.path(path.data, fname.extra.info.current))
+file.link(file.path(path.data, fname.extra.info.current), 
+          file.path(path.data, fname.extra.info.last))
 
 # Or this: https://stackoverflow.com/a/41773871
 # to use googleway package with an api key
@@ -637,7 +640,7 @@ mv <- mapview(md.sf[1:100,],
         popup = popupImage(fotos[1:100], src = "local"))
 
 # Convert to Spatial object (if needed)
-md.sp <- as(my.sf, "Spatial")
+md.sp <- as(md.sf, "Spatial")
 mapview(md.sp)
 
 #mapshot(mv, url = file.path(ruta.foto, "index.sf.html"),
@@ -678,10 +681,10 @@ md.sample <- md %>%
     Mes=Month,
     Abundància,
 #    Data=Date,
-    NomC=`nom vulgar (comestible)`,
+    NomC=`nom_comestible`,
 #    NomNC=`nom vulgar (no comestible)`,
 #    DetallBolet=`Detalls del bolet`,
-    DescripcioLloc=`descripció lloc`,
+    DescripcioLloc=`Descripcio_Lloc`,
     Lat=Latitude,
     Long=Longitude) %>%
   filter(!is.na(NomC)) %>%
@@ -737,14 +740,14 @@ tilesURL <- "http://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Li
 #    addTiles(tilesURL, 	attribution='Map tiles by <a href="http://server.arcgisonline.com">ArcGIS online</a> &mdash; Map data &copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>') %>% 
   
     # Overlay groups
-    addMarkers(label = ~as.character(md$`nom vulgar (comestible)`),
+    addMarkers(label = ~as.character(md$`nom_comestible`),
                popup = paste(
-                 "Name1:", md$`nom vulgar (comestible)`, "<br>",
-                 "Name2:", md$`nom vulgar (no comestible)`, "<br>",
+                 "Name1:", md$`nom_comestible`, "<br>",
+                 "Name2:", md$`nom_nocomestible`, "<br>",
                  "Abundance:", md$Abundància, "<br>",
-                 "Mushroom Details:", md$`Detalls del bolet`, "<br>",
-                 "Forest density:", md$`Densitat del sotabosc`, "<br>",
-                 "Site desc:", md$`Descripció del lloc`, "<br>",
+                 "Mushroom Details:", md$`Detalls_bolet`, "<br>",
+                 "Forest density:", md$`Densitat_sotabosc`, "<br>",
+                 "Site desc:", md$`Descripcio_Lloc`, "<br>",
                  "Slope:", md$Pendent, "<br>",
                  "Picture:", md$foto, "<br>",
                  "Date:", md$Date
@@ -776,7 +779,7 @@ ct.map.table.all <- bscols(
   ll.md,
 
   # Add the data table next to the map
-  datatable(md[5:10],  filter = 'top', extensions="Scroller", 
+  datatable(md,  filter = 'top', extensions="Scroller", 
             style="bootstrap", class="compact",
             width="100%", rownames = FALSE, 
             options=list(deferRender=TRUE, 
