@@ -126,6 +126,76 @@ for (yy in 2019:2019) {
   }
 }
 
+# -----------------------------------
+# Reconvert my.smc.df into sf object
+# -----------------------------------
+my.smc.df <- my.smc.df %>%
+  mutate(geo2 = str_replace(geometry, "c\\(", "")) %>% 
+  mutate(geo2 = str_replace(geo2, ",", "")) %>% 
+  mutate(geo2 = str_replace(geo2, "\\)", "")) %>% 
+  separate(geo2, into=c("lon", "lat"), sep=" ") %>% 
+  mutate_at(c("lon", "lat"), as.numeric)
+
+my.smc.sf <- st_as_sf(my.smc.df, coords = c("lon", "lat"), crs = 4326)
+
+
+# ------------------------------------------
+# Massage data to aggregate records in a single Data frame
+# ------------------------------------------
+# Read all meteo data in a R to end up producing a single data.frame with all data from all stations
+# File list (fl)
+fl.smc <- dir_ls(path=file.path("precipitacio", "_smc", yy, mm),  
+                     regexp="[M][P][_][a-zA-Z0-9]+.txt$", invert=TRUE)
+#glob="*.txt",
+
+list.data <- list()
+for (f in fl.smc) {
+  # Llegim l'arxiu i el desem en data.frame dins un element d'una llista
+  list.data[[f]] <- rio::import(fl.smc[f], skip=1)
+}
+
+# Convert list of n df into one single df
+d <- bind_rows(list.data, .id = "column_label")
+colnames(d) <- c("Station", "Date", "MeanTemperature", "MinTemperature", "MaxTemperature", "Precipitation", "WindSpeed", "WindDirection", "MeanRelativeHumidity", "MinRelativeHumidity", "MaxRelativeHumidity", "Radiation")
+d$Station <- gsub(paste0(file.path("precipitacio", "_smc", yy, mm), "/"), "",
+                  d$Station, fixed=T)
+d$Station <- gsub(".txt", "", d$Station, fixed=T)
+
+
+# ------------------------------------------
+# Cumulative rainfall sum in rolling windows
+# ------------------------------------------
+rollsum_5 <- tibbletime::rollify(sum, window = 5)
+d.sum <- d %>%
+  select(Station, Date, Precipitation) %>% 
+  mutate(Date = ymd(Date)) %>% 
+  group_by(Station, Date) %>%
+  summarise(Precipitation = sum(Precipitation)) %>%
+  mutate(cumsum = rollsum_5(Precipitation)) %>%
+  ungroup %>%
+  filter(Precipitation != 0) %>% 
+  filter(cumsum > 40) %>% 
+  filter(Date >= today() - months(2))
+
+
+# ------------------------------------------
+# Attach side info from these stations through inner join
+# ------------------------------------------
+d.sum.extra <- inner_join(d.sum, my.smc.sf, by=c("Station"="ID"))
+d.sum.extra
+
+# ------------------------------------------
+# Map of stations with higher rainfall than threshold over period of interest
+# ------------------------------------------
+#plot(d.sum.extra["geometry"])
+cat.sf <- st_transform(st_as_sf(d.sum.extra), st_crs(3857))
+#plot(cat.sf, pch = 13, cex = 1.5, col="red", axes=TRUE)
+plot(cat.sf["elevation"], bgMap = bgMap, pch = 16, cex = 1.5, axes=TRUE)
+
+# ===================================================================
+# ===================================================================
+# ===================================================================
+
 # ------------------------------------------
 # get data from aemet
 # ------------------------------------------
@@ -208,19 +278,19 @@ for (yy in 2019:2019) {
 # ------------------------------------------
 # Read all meteo data in a R to end up producing a single data.frame with all data from all stations
 # File list (fl)
-fl <- fs::dir_ls(path=file.path("precipitacio", "_aemet", yy), type="file",  regexp="/-?\\d+[a-zA-Z].txt$")
+fl.aemet <- fs::dir_ls(path=file.path("precipitacio", "_aemet", yy), type="file",  regexp="/-?\\d+[a-zA-Z].txt$")
 #glob="*.txt",
 
 list.data <- list()
-for (f in fl) {
+for (f in fl.aemet) {
   # Llegim l'arxiu i el desem en data.frame dins un element d'una llista
-  list.data[[f]] <- rio::import(fl[f], skip=1)
+  list.data[[f]] <- rio::import(fl.aemet[f], skip=1)
 }
 
 # Convert list of n df into one single df
 d <- bind_rows(list.data, .id = "column_label")
 colnames(d) <- c("Station", "Date", "Precipitation", "MeanTemperature", "MinTemperature", "MaxTemperature", "WindDirection", "WindSpeed", "SunshineHours")
-d$Station <- gsub("precipitacio/aemet/2019/", "", d$Station, fixed=T)
+d$Station <- gsub("precipitacio/_aemet/2019/", "", d$Station, fixed=T)
 d$Station <- gsub(".txt", "", d$Station, fixed=T)
 
 
@@ -257,9 +327,10 @@ plot(cat.sf, bgMap = bgMap, pch = 16, cex = 1.5, col="red", axes=TRUE)
 # ------------------------------------------
 # Map with all stations in Catalonia from AEMET
 # ------------------------------------------
-sl.sf.ct.all.3857 <- st_transform(sl.sf.ct.all["elevation"], st_crs(3857))
-plot(sl.sf.ct.all.3857, bgMap = bgMap, pch = 16, cex = 1.5, col="orange", axes=TRUE)
-
+if (F) {
+  sl.sf.ct.all.3857 <- st_transform(sl.sf.ct.all["elevation"], st_crs(3857))
+  plot(sl.sf.ct.all.3857, bgMap = bgMap, pch = 16, cex = 1.5, col="orange", axes=TRUE)
+}
 # ============================================================================
 # WeeWX - Open source software for your weather station. 
 # http://www.weewx.com/stations.html
