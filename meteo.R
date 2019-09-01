@@ -97,21 +97,29 @@ plot(smc.today.sf.3857["Precipitation"], bgMap = bgMap, pch = 16, cex = 1.5, axe
 # ------------------------------------------
 # Fetch Historical Data
 # ------------------------------------------
+# Get the list of stations of interest
+my.smc.files <- list.files(path=file.path("precipitacio", "_smc"),
+                           pattern="*._smc_station_list_subset.csv")
+my.smc.df <- rio::import(file.path("precipitacio", "_smc", my.smc.files[length(my.smc.files)]))
+#my.smc.df$ID
+
 # Display progress bar
 for (yy in 2019:2019) {
-  p <- progress_estimated(length(smc.sl.id))
-  for (ss in 1:length(smc.sl.id)){
-    cat(paste0("\nLoop item: ", ss, ", station: ", smc.sl.id[ss]))
+  mm <- "08" # month in mm format, i.e., string with 2 digits
+  p <- progress_estimated(length(my.smc.df$ID))
+  for (ss in 1:length(my.smc.df$ID)){
+    cat(paste0("\nLoop item: ", ss, ", station: ", my.smc.df$ID[ss]))
     downloadSMChistorical(api=Sys.getenv("r_smc_api_key"), 
-                            dates = seq(from=as.Date(paste0(yy, "-07-01")), to=as.Date(paste0(yy, "-07-31")), by=1),
-                            station_id = smc.sl.id[ss],
+                            dates = seq(from=as.Date(paste0(yy, "-", mm, "-01")), 
+                                        to=as.Date(paste0(yy, "-", mm, "-31")), by=1),
+                            station_id = my.smc.df$ID[ss],
                             export=T,
-                            exportDir=file.path("precipitacio", "_smc", yy),
+                            exportDir=file.path("precipitacio", "_smc", yy, mm),
                             exportFormat="meteoland/txt"
     )
     #rename station list file name to the name of this station to prevent getting overwritten by the next station
-    file.rename(file.path("precipitacio", "_smc", yy, "MP.txt"), 
-                file.path("precipitacio", "_smc", yy, paste0("MP_", smc.sl.id[ss], ".txt"))
+    file.rename(file.path("precipitacio", "_smc", yy, mm, "MP.txt"), 
+                file.path("precipitacio", "_smc", yy, mm, paste0("MP_", my.smc.df$ID[ss], ".txt"))
     )
     p$tick()$print()
     cat("\n")
