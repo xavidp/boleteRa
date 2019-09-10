@@ -138,14 +138,21 @@ my.smc.df <- my.smc.df %>%
 
 my.smc.sf <- st_as_sf(my.smc.df, coords = c("lon", "lat"), crs = 4326)
 
+# ---------------------------
+# Aggregate data from different months for each same station
+# ---------------------------
+#system("for f in precipitacio/_smc/2019/07/* ; do fname=\"$(basename -- \"$f\")\" ; cat -- \"precipitacio/_smc/2019/07/$fname\" \"precipitacio/_smc/2019/08/$fname\" | sed \"1 d\" > \"precipitacio/_smc/2019/00_$fname\" ; done")
+# So far hardcoded in bash fro two months
+system("for f in precipitacio/_smc/2019/07/* ; do fname=\"$(basename -- \"$f\")\" ; cat \"precipitacio/_smc/2019/07/$fname\" > \"precipitacio/_smc/2019/00_$fname\"; cat \"precipitacio/_smc/2019/08/$fname\" | sed \"1 d\" >> \"precipitacio/_smc/2019/00_$fname\" ; done")
+# pending, redo with find and xargs linux comamds to dynamically fetch all locations within subfolders where the same file name is located
 
 # ------------------------------------------
 # Massage data to aggregate records in a single Data frame
 # ------------------------------------------
 # Read all meteo data in a R to end up producing a single data.frame with all data from all stations
 # File list (fl)
-fl.smc <- dir_ls(path=file.path("precipitacio", "_smc", yy, mm),  
-                     regexp="[M][P][_][a-zA-Z0-9]+.txt$", invert=TRUE)
+fl.smc <- dir_ls(path=file.path("precipitacio", "_smc", yy),  type="file",
+                     regexp="[0][0][_][M][P][_][a-zA-Z0-9]+.txt$", invert=TRUE)
 #glob="*.txt",
 
 list.data <- list()
