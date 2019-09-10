@@ -164,7 +164,7 @@ for (f in fl.smc) {
 # Convert list of n df into one single df
 d <- bind_rows(list.data, .id = "column_label")
 colnames(d) <- c("Station", "Date", "MeanTemperature", "MinTemperature", "MaxTemperature", "Precipitation", "WindSpeed", "WindDirection", "MeanRelativeHumidity", "MinRelativeHumidity", "MaxRelativeHumidity", "Radiation")
-d$Station <- gsub(paste0(file.path("precipitacio", "_smc", yy, mm), "/"), "",
+d$Station <- gsub(paste0(file.path("precipitacio", "_smc", yy), "/00_"), "",
                   d$Station, fixed=T)
 d$Station <- gsub(".txt", "", d$Station, fixed=T)
 
