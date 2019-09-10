@@ -105,10 +105,10 @@ my.smc.df <- rio::import(file.path("precipitacio", "_smc", my.smc.files[length(m
 
 # Display progress bar
 for (yy in 2019:2019) {
-  mm <- "08" # month in mm format, i.e., string with 2 digits
+  mm <- "07" # month in mm format, i.e., string with 2 digits
   p <- progress_estimated(length(my.smc.df$ID))
   for (ss in 1:length(my.smc.df$ID)){
-    cat(paste0("\nLoop item: ", ss, ", station: ", my.smc.df$ID[ss]))
+    cat(paste0("\nLoop item: ", ss, ", station: ", my.smc.df$ID[ss], "\n"))
     downloadSMChistorical(api=Sys.getenv("r_smc_api_key"), 
                             dates = seq(from=as.Date(paste0(yy, "-", mm, "-01")), 
                                         to=as.Date(paste0(yy, "-", mm, "-31")), by=1),
