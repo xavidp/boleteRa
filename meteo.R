@@ -190,7 +190,13 @@ d.sum <- d %>%
 # Attach side info from these stations through inner join
 # ------------------------------------------
 d.sum.extra <- inner_join(d.sum, my.smc.sf, by=c("Station"="ID"))
-d.sum.extra %>% select(-col, -province, -zip, -geometry)
+resum <- d.sum.extra %>% select(-col, -province, -zip, -geometry) 
+resum.dt <- DT::datatable(resum)
+DT::saveWidget(resum.dt, file.path("~", "Dropbox", "Bolets", "Pluja", 
+                                   paste0(format.Date(range(d$Date)[2], "%y%m%d"), "_",
+                                          format.Date(range(d$Date)[1], "%y%m%d"), '_resum.html')))
+
+
 
 # ------------------------------------------
 # Map of stations with higher rainfall than threshold over period of interest
