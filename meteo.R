@@ -105,13 +105,14 @@ my.smc.df <- rio::import(file.path("precipitacio", "_smc", my.smc.files[length(m
 
 # Display progress bar
 for (yy in 2019:2019) {
-  mm <- "07" # month in mm format, i.e., string with 2 digits
+  mm <- "09" # month in mm format, i.e., string with 2 digits
+  dir.create(file.path("precipitacio", "_smc", yy, mm))
   p <- progress_estimated(length(my.smc.df$ID))
   for (ss in 1:length(my.smc.df$ID)){
     cat(paste0("\nLoop item: ", ss, ", station: ", my.smc.df$ID[ss], "\n"))
     downloadSMChistorical(api=Sys.getenv("r_smc_api_key"), 
                             dates = seq(from=as.Date(paste0(yy, "-", mm, "-01")), 
-                                        to=as.Date(paste0(yy, "-", mm, "-31")), by=1),
+                                        to=as.Date(paste0(yy, "-", mm, "-13")), by=1),
                             station_id = my.smc.df$ID[ss],
                             export=T,
                             exportDir=file.path("precipitacio", "_smc", yy, mm),
@@ -143,7 +144,7 @@ my.smc.sf <- st_as_sf(my.smc.df, coords = c("lon", "lat"), crs = 4326)
 # ---------------------------
 #system("for f in precipitacio/_smc/2019/07/* ; do fname=\"$(basename -- \"$f\")\" ; cat -- \"precipitacio/_smc/2019/07/$fname\" \"precipitacio/_smc/2019/08/$fname\" | sed \"1 d\" > \"precipitacio/_smc/2019/00_$fname\" ; done")
 # So far hardcoded in bash fro two months
-system("for f in precipitacio/_smc/2019/07/* ; do fname=\"$(basename -- \"$f\")\" ; cat \"precipitacio/_smc/2019/07/$fname\" > \"precipitacio/_smc/2019/00_$fname\"; cat \"precipitacio/_smc/2019/08/$fname\" | sed \"1 d\" >> \"precipitacio/_smc/2019/00_$fname\" ; done")
+system("for f in precipitacio/_smc/2019/07/* ; do fname=\"$(basename -- \"$f\")\" ; cat \"precipitacio/_smc/2019/07/$fname\" > \"precipitacio/_smc/2019/00_$fname\"; cat \"precipitacio/_smc/2019/08/$fname\" | sed \"1 d\" >> \"precipitacio/_smc/2019/00_$fname\"; cat \"precipitacio/_smc/2019/09/$fname\" | sed \"1 d\" >> \"precipitacio/_smc/2019/00_$fname\" ; done")
 # pending, redo with find and xargs linux comamds to dynamically fetch all locations within subfolders where the same file name is located
 
 # ------------------------------------------
